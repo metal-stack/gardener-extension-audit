@@ -1,0 +1,43 @@
+image:
+  repository: ghcr.io/metal-stack/gardener-extension-audit
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+resources: {}
+
+controllers:
+  concurrentSyncs: 5
+  healthcheck:
+    concurrentSyncs: 5
+  ignoreOperationAnnotation: false
+
+disableControllers: []
+disableWebhooks: []
+
+# imageVectorOverwrite: |
+#   images:
+#   - name: pause-container
+#     sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+#     repository: gcr.io/google_containers/pause-amd64
+#     tag: "3.0"
+#     version: 1.11.x
+#   - name: pause-container
+#     sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+#     repository: gcr.io/google_containers/pause-amd64
+#     tag: "3.1"
+#     version: ">= 1.12"
+#   ...
+
+webhookConfig:
+  serverPort: 443
+
+config:
+  clientConnection:
+    acceptContentTypes: application/json
+    contentType: application/json
+    qps: 100
+    burst: 130
+
+gardener:
+  version: ""

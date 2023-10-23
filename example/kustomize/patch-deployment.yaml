@@ -1,0 +1,10 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerDeployment
+metadata:
+  name: audit
+type: helm
+providerConfig:
+  values:
+    image:
+      tag: latest
+      pullPolicy: IfNotPresent

@@ -1,0 +1,14 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: audit
+spec:
+  deployment:
+    policy: Always
+  resources:
+  - kind: Extension
+    type: audit
+    globallyEnabled: true
+    lifecycle:
+      reconcile: BeforeKubeAPIServer
+      delete: AfterKubeAPIServer
