@@ -1,8 +1,12 @@
 images:
-- name: auditforwarder
+- name: audit-forwarder
   sourceRepository: https://github.com/metal-stack/audit-forwarder
   repository: ghcr.io/metal-stack/audit-forwarder
-  tag: "v0.2.4"
+  tag: "latest"
+- name: fluent-bit
+  sourceRepository: https://github.com/fluent/fluent-bit
+  repository: fluent/fluent-bit
+  tag: "2.1.10"
 - name: audittailer
   sourceRepository: https://github.com/fluent/fluentd
   repository: fluent/fluentd

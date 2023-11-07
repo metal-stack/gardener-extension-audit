@@ -13,6 +13,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -306,7 +307,6 @@ func (a *actuator) Migrate(ctx context.Context, log logr.Logger, ex *extensionsv
 
 func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster, namespace string) error {
 	const (
-		caName                        = "ca-audittailer"
 		auditForwaderAccessSecretName = gutil.SecretNamePrefixShootAccess + "audit-cluster-forwarding-vpn-gateway"
 	)
 
@@ -315,46 +315,12 @@ func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditCo
 		return err
 	}
 
-	secretConfigs := []extensionssecretsmanager.SecretConfigWithOptions{
-		{
-			Config: &secrets.CertificateSecretConfig{
-				Name:       caName,
-				CommonName: caName,
-				CertType:   secrets.CACert,
-			},
-			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
-		},
-		{
-			Config: &secrets.CertificateSecretConfig{
-				Name:       "audittailer-server",
-				CommonName: "audittailer",
-				DNSNames:   kutil.DNSNamesForService("audittailer", "audit"),
-				CertType:   secrets.ServerCert,
-			},
-			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caName, secretsmanager.UseCurrentCA)},
-		},
-		{
-			Config: &secrets.CertificateSecretConfig{
-				Name:       "audittailer-client",
-				CommonName: "audittailer",
-				DNSNames:   kutil.DNSNamesForService("audittailer", "audit"),
-				CertType:   secrets.ClientCert,
-			},
-			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caName, secretsmanager.UseCurrentCA)},
-		},
-	}
-
-	sm, err := extensionssecretsmanager.SecretsManagerForCluster(ctx, log, clock.RealClock{}, a.client, cluster, "audit", secretConfigs)
+	secrets, err := a.generateSecrets(ctx, log, cluster)
 	if err != nil {
 		return err
 	}
 
-	secrets, err := extensionssecretsmanager.GenerateAllSecrets(ctx, sm, secretConfigs)
-	if err != nil {
-		return err
-	}
-
-	shootObjects, err := shootObjects()
+	shootObjects, err := shootObjects(secrets)
 	if err != nil {
 		return err
 	}
@@ -414,11 +380,63 @@ func (a *actuator) deleteResources(ctx context.Context, log logr.Logger, namespa
 	return nil
 }
 
+func (a *actuator) generateSecrets(ctx context.Context, log logr.Logger, cluster *extensions.Cluster) (map[string]*corev1.Secret, error) {
+	const (
+		caName = "ca-audittailer"
+	)
+
+	secretConfigs := []extensionssecretsmanager.SecretConfigWithOptions{
+		{
+			Config: &secrets.CertificateSecretConfig{
+				Name:       caName,
+				CommonName: caName,
+				CertType:   secrets.CACert,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
+		},
+		{
+			Config: &secrets.CertificateSecretConfig{
+				Name:       "audittailer-server",
+				CommonName: "audittailer",
+				DNSNames:   kutil.DNSNamesForService("audittailer", v1alpha1.ShootAudittailerNamespace),
+				CertType:   secrets.ServerCert,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caName, secretsmanager.UseCurrentCA)},
+		},
+		{
+			Config: &secrets.CertificateSecretConfig{
+				Name:       "audittailer-client",
+				CommonName: "audittailer",
+				DNSNames:   kutil.DNSNamesForService("audittailer", v1alpha1.ShootAudittailerNamespace),
+				CertType:   secrets.ClientCert,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caName, secretsmanager.UseCurrentCA)},
+		},
+	}
+
+	sm, err := extensionssecretsmanager.SecretsManagerForCluster(ctx, log, clock.RealClock{}, a.client, cluster, "audit", secretConfigs)
+	if err != nil {
+		return nil, err
+	}
+
+	secrets, err := extensionssecretsmanager.GenerateAllSecrets(ctx, sm, secretConfigs)
+	if err != nil {
+		return nil, err
+	}
+
+	return secrets, nil
+}
+
 func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.Secret, cluster *extensions.Cluster, shootAccessSecretName, namespace string) ([]client.Object, error) {
-	// grcImage, err := imagevector.ImageVector().FindImage("group-rolebinding-controller")
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to find group-rolebinding-controller image: %w", err)
-	// }
+	auditForwarderImage, err := imagevector.ImageVector().FindImage("audit-forwarder")
+	if err != nil {
+		return nil, fmt.Errorf("failed to find audit-forwarder image: %w", err)
+	}
+
+	fluentBitImage, err := imagevector.ImageVector().FindImage("fluent-bit")
+	if err != nil {
+		return nil, fmt.Errorf("failed to find fluent-bit image: %w", err)
+	}
 
 	kubeconfig, err := webhookKubeconfig(namespace)
 	if err != nil {
@@ -430,112 +448,22 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		return nil, fmt.Errorf("unable to parse persistence size as kubernetes quantity: %w", err)
 	}
 
-	fluentbitConfigMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "fluent-bit-config",
-			Namespace: namespace,
-		},
-		Data: map[string]string{
-			"fluent-bit.conf": `[INPUT]
+	var (
+		fluentbitConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "fluent-bit-config",
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				"fluent-bit.conf": `[INPUT]
     Name            http
 
 @INCLUDE *.backend.conf
 `,
-		},
-	}
+			},
+		}
 
-	auditwebhookStatefulSet := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "audit-webhook-backend",
-			Namespace: namespace,
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas:    pointer.Pointer(int32(2)),
-			ServiceName: "audit-webhook-backend",
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "audit-webhook-backend",
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "audit-webhook-backend",
-						"networking.gardener.cloud/from-prometheus":    "allowed",
-						"networking.gardener.cloud/to-dns":             "allowed",
-						"networking.gardener.cloud/to-public-networks": "allowed",
-					},
-					Annotations: map[string]string{
-						"scheduler.alpha.kubernetes.io/critical-pod": "",
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "fluent-bit",
-							Image: "fluent/fluent-bit:2.1.10", // TODO: factor out to image vector
-							Args: []string{
-								"--storage_path=/data",
-								"--config=/config/fluent-bit.conf",
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "config",
-									MountPath: "/config",
-								},
-								{
-									Name:      "audit-data",
-									MountPath: "/data",
-								},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "fluent-bit-config",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "audit-data",
-					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{
-							corev1.ReadWriteOnce,
-						},
-						StorageClassName: auditConfig.Persistence.StorageClassName,
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: size,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	objects := []client.Object{
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "audit-webhook-config",
-				Namespace: namespace,
-			},
-			StringData: map[string]string{
-				"audit-webhook-config.yaml": string(kubeconfig),
-			},
-		},
-		&corev1.ConfigMap{
+		auditPolicyConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audit-policy",
 				Namespace: namespace,
@@ -543,7 +471,104 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			Data: map[string]string{
 				"audit-policy.yaml": *auditConfig.AuditPolicy,
 			},
-		},
+		}
+
+		auditWebhookConfigSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-webhook-config",
+				Namespace: namespace,
+			},
+			StringData: map[string]string{
+				"audit-webhook-config.yaml": string(kubeconfig),
+			},
+		}
+
+		auditwebhookStatefulSet = &appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-webhook-backend",
+				Namespace: namespace,
+			},
+			Spec: appsv1.StatefulSetSpec{
+				Replicas:    pointer.Pointer(int32(2)),
+				ServiceName: "audit-webhook-backend",
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "audit-webhook-backend",
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app": "audit-webhook-backend",
+							"networking.gardener.cloud/from-prometheus":    "allowed",
+							"networking.gardener.cloud/to-dns":             "allowed",
+							"networking.gardener.cloud/to-public-networks": "allowed",
+						},
+						Annotations: map[string]string{
+							"scheduler.alpha.kubernetes.io/critical-pod": "",
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "fluent-bit",
+								Image: fluentBitImage.String(),
+								Args: []string{
+									"--storage_path=/data",
+									"--config=/config/fluent-bit.conf",
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "config",
+										MountPath: "/config",
+									},
+									{
+										Name:      "audit-data",
+										MountPath: "/data",
+									},
+								},
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: "config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "fluent-bit-config",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "audit-data",
+						},
+						Spec: corev1.PersistentVolumeClaimSpec{
+							AccessModes: []corev1.PersistentVolumeAccessMode{
+								corev1.ReadWriteOnce,
+							},
+							StorageClassName: auditConfig.Persistence.StorageClassName,
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceStorage: size,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	)
+
+	objects := []client.Object{
+		auditwebhookStatefulSet,
+		auditWebhookConfigSecret,
+		auditPolicyConfigMap,
 		fluentbitConfigMap,
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -681,12 +706,15 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 							"networking.gardener.cloud/to-dns": "allowed",
 							"networking.gardener.cloud/to-shoot-apiserver": "allowed",
 						},
+						Annotations: map[string]string{
+							"checksum/secret-audittailer-client": utils.ComputeSecretChecksum(secrets["audittailer-client"].Data),
+						},
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
 								Name:  "audit-forwarder",
-								Image: "ghcr.io/metal-stack/audit-forwarder:latest", // TODO: use from image vector
+								Image: auditForwarderImage.String(),
 								Env: []corev1.EnvVar{
 									{
 										Name:  "AUDIT_KUBECFG",
@@ -694,7 +722,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 									},
 									{
 										Name:  "AUDIT_NAMESPACE",
-										Value: "audit",
+										Value: v1alpha1.ShootAudittailerNamespace,
 									},
 									{
 										Name:  "AUDIT_SERVICE_NAME",
@@ -792,64 +820,12 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		}
 
 		objects = append(objects, auditforwarderNetworkpolicies...)
-
 	}
 
+	auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/secret-"+auditWebhookConfigSecret.Name] = utils.ComputeSecretChecksum(auditWebhookConfigSecret.Data)
+	auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/config-"+fluentbitConfigMap.Name] = utils.ComputeConfigMapChecksum(fluentbitConfigMap.Data)
+
 	return objects, nil
-
-	// func (vp *valuesProvider) audittailerSecretConfigs() []extensionssecretsmanager.SecretConfigWithOptions {
-	// 	if !vp.controllerConfig.ClusterAudit.Enabled {
-	// 		return nil
-	// 	}
-
-	// 	const auditTailerCAName = "ca-provider-metal-audittailer"
-	// 	return []extensionssecretsmanager.SecretConfigWithOptions{
-	// 		{
-	// 			Config: &secrets.CertificateSecretConfig{
-	// 				Name:       auditTailerCAName,
-	// 				CommonName: auditTailerCAName,
-	// 				CertType:   secrets.CACert,
-	// 			},
-	// 			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
-	// 		},
-	// 		{
-	// 			Config: &secrets.CertificateSecretConfig{
-	// 				Name:                        metal.AudittailerClientSecretName,
-	// 				CommonName:                  "audittailer",
-	// 				DNSNames:                    []string{"audittailer"},
-	// 				Organization:                []string{"audittailer-client"},
-	// 				CertType:                    secrets.ClientCert,
-	// 				SkipPublishingCACertificate: false,
-	// 			},
-	// 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(auditTailerCAName, secretsmanager.UseCurrentCA)},
-	// 		},
-	// 		{
-	// 			Config: &secrets.CertificateSecretConfig{
-	// 				Name:                        metal.AudittailerServerSecretName,
-	// 				CommonName:                  "audittailer",
-	// 				DNSNames:                    []string{"audittailer"},
-	// 				Organization:                []string{"audittailer-server"},
-	// 				CertType:                    secrets.ServerCert,
-	// 				SkipPublishingCACertificate: false,
-	// 			},
-	// 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(auditTailerCAName, secretsmanager.UseCurrentCA)},
-	// 		},
-	// 	}
-	// }
-
-	// // AuditPolicyName is the name of the configmap containing the audit policy.
-	// AuditPolicyName = "audit-policy-override"
-	// // AudittailerNamespace is the namespace where the audit tailer will get deployed.
-	// AudittailerNamespace = "audit"
-	// // AudittailerClientSecretName is the name of the secret containing the certificates for the audittailer client.
-	// AudittailerClientSecretName = "audittailer-client" // nolint:gosec
-	// // AudittailerServerSecretName is the name of the secret containing the certificates for the audittailer server.
-	// AudittailerServerSecretName = "audittailer-server" // nolint:gosec
-	// // AuditForwarderSplunkConfigName is the name of the configmap containing the splunk configuration for the auditforwarder.
-	// AuditForwarderSplunkConfigName = "audit-to-splunk-config"
-	// // AuditForwarderSplunkSecretName is the name of the secret containing the splunk hec token and, if required, the ca certificate.
-	// AuditForwarderSplunkSecretName = "audit-to-splunk-secret" // nolint:gosec
-	// return nil, nil
 }
 
 func webhookKubeconfig(namespace string) ([]byte, error) {
@@ -893,27 +869,19 @@ func webhookKubeconfig(namespace string) ([]byte, error) {
 	return kubeconfig, nil
 }
 
-func shootObjects() ([]client.Object, error) {
+func shootObjects(secrets map[string]*corev1.Secret) ([]client.Object, error) {
 	audittailerImage, err := imagevector.ImageVector().FindImage("audittailer")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find audittailer image: %w", err)
 	}
 
-	return []client.Object{
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "audit",
-				Labels: map[string]string{
-					"k8s-app": "audittailer",
-				},
-			},
-		},
-		&corev1.ConfigMap{
+	var (
+		audittailerConfig = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audittailer-config",
-				Namespace: "audit",
+				Namespace: v1alpha1.ShootAudittailerNamespace,
 				Labels: map[string]string{
-					"app.kubernetes.io/name": "audittailer",
+					"app": "audittailer",
 				},
 			},
 			Data: map[string]string{
@@ -942,26 +910,41 @@ func shootObjects() ([]client.Object, error) {
 </match>
 `,
 			},
+		}
+	)
+
+	return []client.Object{
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: v1alpha1.ShootAudittailerNamespace,
+				Labels: map[string]string{
+					"app": "audittailer",
+				},
+			},
 		},
+		audittailerConfig,
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audittailer",
-				Namespace: "audit",
+				Namespace: v1alpha1.ShootAudittailerNamespace,
 				Labels: map[string]string{
-					"k8s-app": "audittailer",
+					"app": "audittailer",
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"k8s-app": "audittailer",
+						"app": "audittailer",
 					},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							"k8s-app": "audittailer",
-							"app":     "audittailer",
+							"app": "audittailer",
+						},
+						Annotations: map[string]string{
+							"checksum/secret-audittailer-server":        utils.ComputeSecretChecksum(secrets["audittailer-server"].Data),
+							"checksum/config-" + audittailerConfig.Name: utils.ComputeConfigMapChecksum(audittailerConfig.Data),
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -1038,7 +1021,7 @@ func shootObjects() ([]client.Object, error) {
 								Name: "fluentd-certs",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: "", // FIXME: server secret self-signed
+										SecretName: secrets["audittailer-server"].Name,
 									},
 								},
 							},
@@ -1056,7 +1039,7 @@ func shootObjects() ([]client.Object, error) {
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audittailer",
-				Namespace: "audit",
+				Namespace: v1alpha1.ShootAudittailerNamespace,
 				Labels: map[string]string{
 					"app": "audittailer",
 				},
@@ -1076,7 +1059,7 @@ func shootObjects() ([]client.Object, error) {
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audittailer",
-				Namespace: "audit",
+				Namespace: v1alpha1.ShootAudittailerNamespace,
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -1095,7 +1078,7 @@ func shootObjects() ([]client.Object, error) {
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audittailer",
-				Namespace: "audit",
+				Namespace: v1alpha1.ShootAudittailerNamespace,
 			},
 			Subjects: []rbacv1.Subject{
 				{

@@ -7,6 +7,8 @@ import (
 const (
 	SeedAuditResourceName  = "extension-audit"
 	ShootAuditResourceName = "extension-audit-shoot"
+
+	ShootAudittailerNamespace = "audit"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
