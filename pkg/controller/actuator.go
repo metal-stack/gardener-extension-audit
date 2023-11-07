@@ -444,6 +444,87 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		},
 	}
 
+	auditwebhookStatefulSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "audit-webhook-backend",
+			Namespace: namespace,
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas:    pointer.Pointer(int32(2)),
+			ServiceName: "audit-webhook-backend",
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "audit-webhook-backend",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "audit-webhook-backend",
+						"networking.gardener.cloud/from-prometheus":    "allowed",
+						"networking.gardener.cloud/to-dns":             "allowed",
+						"networking.gardener.cloud/to-public-networks": "allowed",
+					},
+					Annotations: map[string]string{
+						"scheduler.alpha.kubernetes.io/critical-pod": "",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "fluent-bit",
+							Image: "fluent/fluent-bit:2.1.10", // TODO: factor out to image vector
+							Args: []string{
+								"--storage_path=/data",
+								"--config=/config/fluent-bit.conf",
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "config",
+									MountPath: "/config",
+								},
+								{
+									Name:      "audit-data",
+									MountPath: "/data",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "fluent-bit-config",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "audit-data",
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						StorageClassName: auditConfig.Persistence.StorageClassName,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: size,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	objects := []client.Object{
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -478,86 +559,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						Name:     "http",
 						Port:     9880,
 						Protocol: corev1.ProtocolTCP,
-					},
-				},
-			},
-		},
-		&appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "audit-webhook-backend",
-				Namespace: namespace,
-			},
-			Spec: appsv1.StatefulSetSpec{
-				Replicas:    pointer.Pointer(int32(2)),
-				ServiceName: "audit-webhook-backend",
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "audit-webhook-backend",
-					},
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"app": "audit-webhook-backend",
-							"networking.gardener.cloud/from-prometheus":    "allowed",
-							"networking.gardener.cloud/to-dns":             "allowed",
-							"networking.gardener.cloud/to-public-networks": "allowed",
-						},
-						Annotations: map[string]string{
-							"scheduler.alpha.kubernetes.io/critical-pod": "",
-						},
-					},
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:  "fluent-bit",
-								Image: "fluent/fluent-bit:2.1.10", // TODO: factor out to image vector
-								Args: []string{
-									"--storage_path=/data",
-									"--config=/config/fluent-bit.conf",
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      "config",
-										MountPath: "/config",
-									},
-									{
-										Name:      "audit-data",
-										MountPath: "/data",
-									},
-								},
-							},
-						},
-						Volumes: []corev1.Volume{
-							{
-								Name: "config",
-								VolumeSource: corev1.VolumeSource{
-									ConfigMap: &corev1.ConfigMapVolumeSource{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "fluent-bit-config",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "audit-data",
-						},
-						Spec: corev1.PersistentVolumeClaimSpec{
-							AccessModes: []corev1.PersistentVolumeAccessMode{
-								corev1.ReadWriteOnce,
-							},
-							StorageClassName: auditConfig.Persistence.StorageClassName,
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceStorage: size,
-								},
-							},
-						},
 					},
 				},
 			},
@@ -628,7 +629,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 	}
 
 	if pointer.SafeDeref(auditConfig.Backends.ClusterForwarding).Enabled {
-		fluentbitConfigMap.Data["log.backend.conf"] = `[OUTPUT]
+		fluentbitConfigMap.Data["clusterforwarding.backend.conf"] = `[OUTPUT]
     Name                  forward
     Match                 audit
     Host                  audit-cluster-forwarding-vpn-gateway
@@ -638,11 +639,29 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
     tls                   On
     tls.verify            On
     tls.debug             2
-    tls.ca_file           /certs/cluster-forwarding/ca.crt
-    tls.crt_file          /certs/cluster-forwarding/tls.crt
-    tls.key_file          /certs/cluster-forwarding/tls.key
+    tls.ca_file           /backends/cluster-forwarding/certs/ca.crt
+    tls.crt_file          /backends/cluster-forwarding/certs/tls.crt
+    tls.key_file          /backends/cluster-forwarding/certs/tls.key
     tls.vhost             audittailer
 `
+
+		auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      "audittailer-client",
+				MountPath: "/backends/cluster-forwarding/certs",
+			})
+
+		auditwebhookStatefulSet.Spec.Template.Spec.Volumes = append(auditwebhookStatefulSet.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: "audittailer-client",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secrets["audittailer-client"].Name,
+					},
+				},
+			},
+		)
+
 		auditForwarder := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audit-cluster-forwarding-vpn-gateway",
@@ -714,6 +733,66 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		}
 
 		objects = append(objects, auditForwarder)
+
+		auditforwarderNetworkpolicies := []client.Object{
+			&networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "allow-to-audit-cluster-forwarding-vpn-gateway-from-audit-webhook",
+					Namespace: namespace,
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "audit-cluster-forwarding-vpn-gateway",
+						},
+					},
+					Ingress: []networkingv1.NetworkPolicyIngressRule{
+						{
+							From: []networkingv1.NetworkPolicyPeer{
+								{
+									PodSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"app": "audit-webhook-backend",
+										},
+									},
+								},
+							},
+						},
+					},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+				},
+			},
+			&networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "allow-from-audit-webhook-to-audit-cluster-forwarding-vpn-gateway",
+					Namespace: namespace,
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "audit-webhook-backend",
+						},
+					},
+					Egress: []networkingv1.NetworkPolicyEgressRule{
+						{
+							To: []networkingv1.NetworkPolicyPeer{
+								{
+									PodSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"app": "audit-cluster-forwarding-vpn-gateway",
+										},
+									},
+								},
+							},
+						},
+					},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				},
+			},
+		}
+
+		objects = append(objects, auditforwarderNetworkpolicies...)
+
 	}
 
 	return objects, nil
