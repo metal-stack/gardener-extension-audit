@@ -249,13 +249,6 @@ func (a *actuator) InjectScheme(scheme *runtime.Scheme) error {
 
 // Reconcile the Extension resource.
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	namespace := ex.GetNamespace()
-
-	cluster, err := controller.GetCluster(ctx, a.client, namespace)
-	if err != nil {
-		return err
-	}
-
 	auditConfig := &v1alpha1.AuditConfig{}
 	if ex.Spec.ProviderConfig != nil {
 		if _, _, err := a.decoder.Decode(ex.Spec.ProviderConfig.Raw, nil, auditConfig); err != nil {
@@ -281,6 +274,13 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 				Enabled: true,
 			},
 		}
+	}
+
+	namespace := ex.GetNamespace()
+
+	cluster, err := controller.GetCluster(ctx, a.client, namespace)
+	if err != nil {
+		return err
 	}
 
 	if err := a.createResources(ctx, log, auditConfig, cluster, namespace); err != nil {
@@ -451,11 +451,23 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 	var (
 		fluentbitConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fluent-bit-config",
+				Name:      "audit-fluent-bit-config",
 				Namespace: namespace,
 			},
 			Data: map[string]string{
-				"fluent-bit.conf": `[INPUT]
+				"fluent-bit.conf": `[SERVICE]
+flush                     1
+log_Level                 info
+
+storage.path              /data/
+storage.sync              normal
+storage.checksum          off
+
+storage.max_chunks_up     128
+storage.backlog.mem_limit 5M
+
+[INPUT]
+    storage.type    filesystem
     Name            http
 
 @INCLUDE *.backend.conf
@@ -535,7 +547,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "fluent-bit-config",
+											Name: "audit-fluent-bit-config",
 										},
 									},
 								},
@@ -648,26 +660,28 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 
 	if pointer.SafeDeref(auditConfig.Backends.Log).Enabled {
 		fluentbitConfigMap.Data["log.backend.conf"] = `[OUTPUT]
-    Name                  stdout
-    Match                 audit
+    Name                     stdout
+    Match                    audit
+    storage.total_limit_size 10M
 `
 	}
 
 	if pointer.SafeDeref(auditConfig.Backends.ClusterForwarding).Enabled {
 		fluentbitConfigMap.Data["clusterforwarding.backend.conf"] = `[OUTPUT]
-    Name                  forward
-    Match                 audit
-    Host                  audit-cluster-forwarding-vpn-gateway
-    Port                  9876
-    Require_ack_response  True
-    Compress              gzip
-    tls                   On
-    tls.verify            On
-    tls.debug             2
-    tls.ca_file           /backends/cluster-forwarding/certs/ca.crt
-    tls.crt_file          /backends/cluster-forwarding/certs/tls.crt
-    tls.key_file          /backends/cluster-forwarding/certs/tls.key
-    tls.vhost             audittailer
+    Name                        forward
+    Match                       audit
+    storage.total_limit_size    100M
+    Host                        audit-cluster-forwarding-vpn-gateway
+    Port                        9876
+    Require_ack_response        True
+    Compress                    gzip
+    tls                         On
+    tls.verify                  On
+    tls.debug                   2
+    tls.ca_file                 /backends/cluster-forwarding/certs/ca.crt
+    tls.crt_file                /backends/cluster-forwarding/certs/tls.crt
+    tls.key_file                /backends/cluster-forwarding/certs/tls.key
+    tls.vhost                   audittailer
 `
 
 		auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
