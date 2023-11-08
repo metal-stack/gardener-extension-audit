@@ -141,6 +141,7 @@ func Convert_audit_AuditClusterForwarding_To_v1alpha1_AuditClusterForwarding(in 
 
 func autoConvert_v1alpha1_AuditConfig_To_audit_AuditConfig(in *AuditConfig, out *audit.AuditConfig, s conversion.Scope) error {
 	out.Persistence = (*audit.AuditPersistence)(unsafe.Pointer(in.Persistence))
+	out.WebhookMode = audit.AuditWebhookMode(in.WebhookMode)
 	out.AuditPolicy = (*string)(unsafe.Pointer(in.AuditPolicy))
 	out.Backends = (*audit.AuditBackends)(unsafe.Pointer(in.Backends))
 	return nil
@@ -153,6 +154,7 @@ func Convert_v1alpha1_AuditConfig_To_audit_AuditConfig(in *AuditConfig, out *aud
 
 func autoConvert_audit_AuditConfig_To_v1alpha1_AuditConfig(in *audit.AuditConfig, out *AuditConfig, s conversion.Scope) error {
 	out.Persistence = (*AuditPersistence)(unsafe.Pointer(in.Persistence))
+	out.WebhookMode = AuditWebhookMode(in.WebhookMode)
 	out.AuditPolicy = (*string)(unsafe.Pointer(in.AuditPolicy))
 	out.Backends = (*AuditBackends)(unsafe.Pointer(in.Backends))
 	return nil

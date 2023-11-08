@@ -9,6 +9,14 @@ const (
 	ShootAuditResourceName = "extension-audit-shoot"
 
 	ShootAudittailerNamespace = "audit"
+
+	AuditWebhookModeBatch          AuditWebhookMode = "batch"
+	AuditWebhookModeBlocking       AuditWebhookMode = "blocking"
+	AuditWebhookModeBlockingStrict AuditWebhookMode = "blocking-strict"
+)
+
+type (
+	AuditWebhookMode string
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -18,6 +26,8 @@ type AuditConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
 	Persistence *AuditPersistence `json:"persistence,omitempty"`
+
+	WebhookMode AuditWebhookMode `json:"webhookMode,omitempty"`
 
 	AuditPolicy *string `json:"auditPolicy,omitempty"`
 

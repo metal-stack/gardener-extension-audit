@@ -16,11 +16,12 @@ spec:
     providerConfig:
       apiVersion: audit.metal.extensions.gardener.cloud/v1alpha1
       kind: AuditConfig
+      webhookMode: blocking
       backends:
         log:
           enabled: true
         clusterForwarding:
-          enabled: true
+          enabled: false
       # persistence:
       #   size: 10Gi
       # auditPolicy: |
