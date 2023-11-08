@@ -456,7 +456,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			},
 			Data: map[string]string{
 				"fluent-bit.conf": `[SERVICE]
-flush                     1
 log_Level                 info
 
 storage.path              /data/
