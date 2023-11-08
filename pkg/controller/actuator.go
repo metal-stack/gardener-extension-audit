@@ -456,14 +456,14 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			},
 			Data: map[string]string{
 				"fluent-bit.conf": `[SERVICE]
-log_Level                 info
+    log_Level                 info
 
-storage.path              /data/
-storage.sync              normal
-storage.checksum          off
+    storage.path              /data/
+    storage.sync              normal
+    storage.checksum          off
 
-storage.max_chunks_up     128
-storage.backlog.mem_limit 5M
+    storage.max_chunks_up     128
+    storage.backlog.mem_limit 5M
 
 [INPUT]
     storage.type    filesystem
