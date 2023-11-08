@@ -92,6 +92,8 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 		ensureVolumes(ps)
 	}
 
+	template.Labels["networking.resources.gardener.cloud/to-audit-webhook-backend-tcp-9880"] = "allowed"
+
 	return nil
 }
 

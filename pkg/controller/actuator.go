@@ -37,7 +37,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -512,9 +511,11 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							"app": "audit-webhook-backend",
-							"networking.gardener.cloud/from-prometheus":    "allowed",
-							"networking.gardener.cloud/to-dns":             "allowed",
-							"networking.gardener.cloud/to-public-networks": "allowed",
+							"networking.gardener.cloud/from-prometheus":                                            "allowed",
+							"networking.gardener.cloud/to-dns":                                                     "allowed",
+							"networking.gardener.cloud/to-public-networks":                                         "allowed",
+							"networking.gardener.cloud/from-shoot-apiserver":                                       "allowed",
+							"networking.resources.gardener.cloud/to-audit-cluster-forwarding-vpn-gateway-tcp-9876": "allowed",
 						},
 						Annotations: map[string]string{
 							"scheduler.alpha.kubernetes.io/critical-pod": "",
@@ -600,62 +601,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				},
 			},
 		},
-		&networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-to-audit-webhook-backend-from-kube-apiserver",
-				Namespace: namespace,
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "audit-webhook-backend",
-					},
-				},
-				Ingress: []networkingv1.NetworkPolicyIngressRule{
-					{
-						From: []networkingv1.NetworkPolicyPeer{
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"app":  "kubernetes",
-										"role": "apiserver",
-									},
-								},
-							},
-						},
-					},
-				},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
-			},
-		},
-		&networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-from-kube-apiserver-to-audit-webhook-backend",
-				Namespace: namespace,
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app":  "kubernetes",
-						"role": "apiserver",
-					},
-				},
-				Egress: []networkingv1.NetworkPolicyEgressRule{
-					{
-						To: []networkingv1.NetworkPolicyPeer{
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"app": "audit-webhook-backend",
-									},
-								},
-							},
-						},
-					},
-				},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			},
-		},
 	}
 
 	if pointer.SafeDeref(auditConfig.Backends.Log).Enabled {
@@ -735,13 +680,14 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						Labels: map[string]string{
 							"app": "audit-cluster-forwarding-vpn-gateway",
 
-							"networking.gardener.cloud/to-dns":                                "allowed",
-							"networking.gardener.cloud/to-shoot-apiserver":                    "allowed",
-							"networking.gardener.cloud/to-private-networks":                   "allowed",
-							"networking.gardener.cloud/to-public-networks":                    "allowed", // is this required?
-							"networking.gardener.cloud/to-runtime-apiserver":                  "allowed",
-							"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443":   "allowed",
-							"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-9443": "allowed",
+							"networking.gardener.cloud/to-dns":                                        "allowed",
+							"networking.gardener.cloud/to-shoot-apiserver":                            "allowed",
+							"networking.gardener.cloud/to-private-networks":                           "allowed",
+							"networking.gardener.cloud/to-public-networks":                            "allowed", // is this required?
+							"networking.gardener.cloud/to-runtime-apiserver":                          "allowed",
+							"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443":           "allowed",
+							"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-9443":         "allowed",
+							"networking.resources.gardener.cloud/from-audit-webhook-backend-tcp-9876": "allowed",
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -842,60 +788,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Role",
 					Name:     "audit-cluster-forwarding-vpn-gateway",
-				},
-			},
-			&networkingv1.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "allow-to-audit-cluster-forwarding-vpn-gateway-from-audit-webhook",
-					Namespace: namespace,
-				},
-				Spec: networkingv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app": "audit-cluster-forwarding-vpn-gateway",
-						},
-					},
-					Ingress: []networkingv1.NetworkPolicyIngressRule{
-						{
-							From: []networkingv1.NetworkPolicyPeer{
-								{
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"app": "audit-webhook-backend",
-										},
-									},
-								},
-							},
-						},
-					},
-					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
-				},
-			},
-			&networkingv1.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "allow-from-audit-webhook-to-audit-cluster-forwarding-vpn-gateway",
-					Namespace: namespace,
-				},
-				Spec: networkingv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app": "audit-webhook-backend",
-						},
-					},
-					Egress: []networkingv1.NetworkPolicyEgressRule{
-						{
-							To: []networkingv1.NetworkPolicyPeer{
-								{
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"app": "audit-cluster-forwarding-vpn-gateway",
-										},
-									},
-								},
-							},
-						},
-					},
-					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 				},
 			},
 		}
