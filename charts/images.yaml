@@ -2,7 +2,7 @@ images:
 - name: audit-forwarder
   sourceRepository: https://github.com/metal-stack/audit-forwarder
   repository: ghcr.io/metal-stack/audit-forwarder
-  tag: "latest"
+  tag: "support-audit-extension" # TODO: Pinning
 - name: fluent-bit
   sourceRepository: https://github.com/fluent/fluent-bit
   repository: fluent/fluent-bit

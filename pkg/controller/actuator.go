@@ -658,7 +658,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
     Name                  forward
     Match                 audit
     Host                  audit-cluster-forwarding-vpn-gateway
-    Port                  9090
+    Port                  9876
     Require_ack_response  True
     Compress              gzip
     tls                   On
@@ -748,7 +748,51 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 										Name:  "AUDIT_TLS_VHOST",
 										Value: "audittailer",
 									},
+									{
+										Name:  "AUDIT_PROXY_HOST",
+										Value: "vpn-seed-server",
+									},
+									{
+										Name:  "AUDIT_PROXY_PORT",
+										Value: "9443",
+									},
+									{
+										Name:  "AUDIT_PROXY_CA_FILE",
+										Value: "/proxy/ca/bundle.crt",
+									},
+									{
+										Name:  "AUDIT_PROXY_CLIENT_CRT_FILE",
+										Value: "/proxy/client/tls.crt",
+									},
+									{
+										Name:  "AUDIT_PROXY_CLIENT_KEY_FILE",
+										Value: "/proxy/client/tls.key",
+									},
 								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "ca-vpn",
+										MountPath: "/proxy/ca",
+										ReadOnly:  true,
+									},
+									{
+										Name:      "http-proxy",
+										MountPath: "/proxy/client",
+										ReadOnly:  true,
+									},
+								},
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name:      "ca-vpn",
+								MountPath: "/proxy/ca",
+								ReadOnly:  true,
+							},
+							{
+								Name:      "http-proxy",
+								MountPath: "/proxy/client",
+								ReadOnly:  true,
 							},
 						},
 					},
@@ -760,7 +804,28 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			return nil, err
 		}
 
-		objects = append(objects, auditForwarder)
+		auditforwarderService := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-cluster-forwarding-vpn-gateway",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "audit-cluster-forwarding-vpn-gateway",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Selector: map[string]string{
+					"app": "audit-cluster-forwarding-vpn-gateway",
+				},
+				Ports: []corev1.ServicePort{
+					{
+						Port:       9876,
+						TargetPort: intstr.FromInt(9876),
+					},
+				},
+			},
+		}
+
+		objects = append(objects, auditForwarder, auditforwarderService)
 
 		auditforwarderNetworkpolicies := []client.Object{
 			&networkingv1.NetworkPolicy{
@@ -913,6 +978,10 @@ func shootObjects(secrets map[string]*corev1.Secret) ([]client.Object, error) {
 		}
 	)
 
+	audittailerServerSecret := secrets["audittailer-server"].DeepCopy()
+	audittailerServerSecret.Namespace = v1alpha1.ShootAudittailerNamespace
+	audittailerServerSecret.ObjectMeta.ResourceVersion = ""
+
 	return []client.Object{
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -922,6 +991,7 @@ func shootObjects(secrets map[string]*corev1.Secret) ([]client.Object, error) {
 				},
 			},
 		},
+		audittailerServerSecret,
 		audittailerConfig,
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1083,7 +1153,7 @@ func shootObjects(secrets map[string]*corev1.Secret) ([]client.Object, error) {
 			Subjects: []rbacv1.Subject{
 				{
 					Kind:      "ServiceAccount",
-					Name:      "audittailer-client",
+					Name:      "audit-cluster-forwarding-vpn-gateway",
 					Namespace: "kube-system",
 				},
 			},
