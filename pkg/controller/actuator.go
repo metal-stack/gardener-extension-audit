@@ -784,16 +784,16 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 							},
 						},
 						Volumes: []corev1.Volume{
-							{
-								Name:      "ca-vpn",
-								MountPath: "/proxy/ca",
-								ReadOnly:  true,
-							},
-							{
-								Name:      "http-proxy",
-								MountPath: "/proxy/client",
-								ReadOnly:  true,
-							},
+							// {
+							// 	Name:      "ca-vpn",
+							// 	MountPath: "/proxy/ca",
+							// 	ReadOnly:  true,
+							// },
+							// {
+							// 	Name:      "http-proxy",
+							// 	MountPath: "/proxy/client",
+							// 	ReadOnly:  true,
+							// },
 						},
 					},
 				},

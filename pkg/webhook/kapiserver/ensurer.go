@@ -53,13 +53,11 @@ func ensureVolumeMounts(c *corev1.Container) {
 		Name:      "audit-policy",
 		ReadOnly:  true,
 		MountPath: "/etc/audit-webhook/policy",
-		// SubPath:   "audit-policy.yaml",
 	})
 	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, corev1.VolumeMount{
 		Name:      "audit-webhook-config",
 		ReadOnly:  true,
 		MountPath: "/etc/audit-webhook/config",
-		// SubPath:   "audit-webhook-config.yaml",
 	})
 }
 
