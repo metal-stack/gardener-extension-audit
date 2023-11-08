@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/config"
+	"github.com/metal-stack/gardener-extension-audit/pkg/controller/fluentbitconfig"
 	"github.com/metal-stack/gardener-extension-audit/pkg/imagevector"
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -455,22 +456,25 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Namespace: namespace,
 			},
 			Data: map[string]string{
-				"fluent-bit.conf": `[SERVICE]
-    log_Level                 info
-
-    storage.path              /data/
-    storage.sync              normal
-    storage.checksum          off
-
-    storage.max_chunks_up     128
-    storage.backlog.mem_limit 5M
-
-[INPUT]
-    storage.type    filesystem
-    Name            http
-
-@INCLUDE *.backend.conf
-`,
+				"fluent-bit.conf": fluentbitconfig.Config{
+					Service: map[string]string{
+						"log_level":                 "info",
+						"storage.path":              "/data/",
+						"storage.sync":              "normal",
+						"storage.checksum":          "off",
+						"storage.max_chunks_up":     "128",
+						"storage.backlog.mem_limit": "5M",
+					},
+					Input: []fluentbitconfig.Input{
+						map[string]string{
+							"storage.type": "filesystem",
+							"name":         "http",
+						},
+					},
+					Includes: []fluentbitconfig.Include{
+						"*.backend.conf",
+					},
+				}.Generate(),
 			},
 		}
 
@@ -658,30 +662,38 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 	}
 
 	if pointer.SafeDeref(auditConfig.Backends.Log).Enabled {
-		fluentbitConfigMap.Data["log.backend.conf"] = `[OUTPUT]
-    Name                     stdout
-    Match                    audit
-    storage.total_limit_size 10M
-`
+		fluentbitConfigMap.Data["log.backend.conf"] = fluentbitconfig.Config{
+			Output: []fluentbitconfig.Output{
+				map[string]string{
+					"match":                    "audit",
+					"name":                     "stdout",
+					"storage.total_limit_size": "10M",
+				},
+			},
+		}.Generate()
 	}
 
 	if pointer.SafeDeref(auditConfig.Backends.ClusterForwarding).Enabled {
-		fluentbitConfigMap.Data["clusterforwarding.backend.conf"] = `[OUTPUT]
-    Name                        forward
-    Match                       audit
-    storage.total_limit_size    100M
-    Host                        audit-cluster-forwarding-vpn-gateway
-    Port                        9876
-    Require_ack_response        True
-    Compress                    gzip
-    tls                         On
-    tls.verify                  On
-    tls.debug                   2
-    tls.ca_file                 /backends/cluster-forwarding/certs/ca.crt
-    tls.crt_file                /backends/cluster-forwarding/certs/tls.crt
-    tls.key_file                /backends/cluster-forwarding/certs/tls.key
-    tls.vhost                   audittailer
-`
+		fluentbitConfigMap.Data["clusterforwarding.backend.conf"] = fluentbitconfig.Config{
+			Output: []fluentbitconfig.Output{
+				map[string]string{
+					"match":                    "audit",
+					"name":                     "forward",
+					"storage.total_limit_size": "100M",
+					"host":                     "audit-cluster-forwarding-vpn-gateway",
+					"port":                     "9876",
+					"require_ack_response":     "True",
+					"compress":                 "gzip",
+					"tls":                      "On",
+					"tls.verify":               "On",
+					"tls.debug":                "2",
+					"tls.ca_file":              "/backends/cluster-forwarding/certs/ca.crt",
+					"tls.crt_file":             "/backends/cluster-forwarding/certs/tls.crt",
+					"tls.key_file":             "/backends/cluster-forwarding/certs/tls.key",
+					"tls.vhost":                "audittailer",
+				},
+			},
+		}.Generate()
 
 		auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
 			corev1.VolumeMount{
@@ -870,6 +882,62 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		}
 
 		objects = append(objects, auditforwarderNetworkpolicies...)
+	}
+
+	if pointer.SafeDeref(auditConfig.Backends.Splunk).Enabled {
+		splunkConfig := map[string]string{
+			"match":                    "audit",
+			"name":                     "forward",
+			"storage.total_limit_size": "100M",
+			"host":                     auditConfig.Backends.Splunk.Host,
+			"port":                     auditConfig.Backends.Splunk.Port,
+			"splunk_token":             auditConfig.Backends.Splunk.Token,
+			"retry_limit":              "False",
+			"splunk_send_raw":          "Off",
+			"event_source":             "${MY_POD_NAME}",
+			"event_sourcetype":         "kube:apiserver:auditlog",
+			"event_index":              auditConfig.Backends.Splunk.Index,
+			"event_host":               cluster.ObjectMeta.Name,
+		}
+
+		if auditConfig.Backends.Splunk.TlsEnabled {
+			splunkConfig["tls"] = "on"
+			splunkConfig["tls.verify"] = "on"
+		}
+		if auditConfig.Backends.Splunk.CaFile != "" {
+			splunkConfig["tls.ca_file "] = "/backends/splunk/certs/ca.crt"
+		}
+
+		fluentbitConfigMap.Data["splunk.backend.conf"] = fluentbitconfig.Config{
+			Output: []fluentbitconfig.Output{splunkConfig},
+		}.Generate()
+
+		splunkSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-webhook-config",
+				Namespace: namespace,
+			},
+			StringData: map[string]string{
+				"audit-webhook-config.yaml": string(kubeconfig),
+			},
+		}
+
+		auditwebhookStatefulSet.Spec.Template.Spec.Volumes = append(auditwebhookStatefulSet.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "splunk-config",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: splunkSecret.Name,
+				},
+			},
+		})
+		auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      "splunk-config",
+			MountPath: "/backends/splunk/certs",
+		})
+
+		auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/secret-splunk-ca"] = utils.ComputeSecretChecksum(splunkSecret.Data)
+
+		objects = append(objects, splunkSecret)
 	}
 
 	auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/secret-"+auditWebhookConfigSecret.Name] = utils.ComputeSecretChecksum(auditWebhookConfigSecret.Data)

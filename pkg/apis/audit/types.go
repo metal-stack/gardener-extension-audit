@@ -36,13 +36,25 @@ type AuditPersistence struct {
 
 type AuditBackends struct {
 	Log               *AuditBackendLog
-	ClusterForwarding *AuditClusterForwarding
+	ClusterForwarding *AuditBackendClusterForwarding
+	Splunk            *AuditBackendSplunk
 }
 
 type AuditBackendLog struct {
 	Enabled bool
 }
 
-type AuditClusterForwarding struct {
+type AuditBackendClusterForwarding struct {
 	Enabled bool
+}
+
+type AuditBackendSplunk struct {
+	Enabled bool
+
+	Index      string
+	Host       string
+	Port       string
+	Token      string
+	CaFile     string
+	TlsEnabled bool
 }
