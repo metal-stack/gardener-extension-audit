@@ -43,6 +43,13 @@ type AuditBackends struct {
 	Log               *AuditBackendLog               `json:"log,omitempty"`
 	ClusterForwarding *AuditBackendClusterForwarding `json:"clusterForwarding,omitempty"`
 	Splunk            *AuditBackendSplunk            `json:"splunk,omitempty"`
+
+	// Possible backends that would be helpful as well:
+	// - Forward
+	// - Loki
+	// - Elasticsearch
+	// - Forward
+	// - Kafka
 }
 
 type AuditBackendLog struct {
