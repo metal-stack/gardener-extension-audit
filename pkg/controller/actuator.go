@@ -757,43 +757,15 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 										Value: "9443",
 									},
 									{
-										Name:  "AUDIT_PROXY_CA_FILE",
-										Value: "/proxy/ca/bundle.crt",
+										Name:  "AUDIT_PROXY_CA_SECRET_NAME",
+										Value: "ca-vpn",
 									},
 									{
-										Name:  "AUDIT_PROXY_CLIENT_CRT_FILE",
-										Value: "/proxy/client/tls.crt",
-									},
-									{
-										Name:  "AUDIT_PROXY_CLIENT_KEY_FILE",
-										Value: "/proxy/client/tls.key",
-									},
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      "ca-vpn",
-										MountPath: "/proxy/ca",
-										ReadOnly:  true,
-									},
-									{
-										Name:      "http-proxy",
-										MountPath: "/proxy/client",
-										ReadOnly:  true,
+										Name:  "AUDIT_PROXY_CLIENT_CERTS_SECRET_NAME",
+										Value: "http-proxy",
 									},
 								},
 							},
-						},
-						Volumes: []corev1.Volume{
-							// {
-							// 	Name:      "ca-vpn",
-							// 	MountPath: "/proxy/ca",
-							// 	ReadOnly:  true,
-							// },
-							// {
-							// 	Name:      "http-proxy",
-							// 	MountPath: "/proxy/client",
-							// 	ReadOnly:  true,
-							// },
 						},
 					},
 				},
