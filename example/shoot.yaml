@@ -21,7 +21,7 @@ spec:
         log:
           enabled: true
         clusterForwarding:
-          enabled: false
+          enabled: true
       # persistence:
       #   size: 10Gi
       # auditPolicy: |

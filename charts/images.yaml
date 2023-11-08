@@ -1,8 +1,8 @@
 images:
-- name: audit-forwarder
-  sourceRepository: https://github.com/metal-stack/audit-forwarder
-  repository: ghcr.io/metal-stack/audit-forwarder
-  tag: "support-audit-extension" # TODO: Pinning
+- name: gardener-vpn-gateway
+  sourceRepository: https://github.com/metal-stack/gardener-vpn-gateway
+  repository: ghcr.io/metal-stack/gardener-vpn-gateway
+  tag: "latest" # TODO: Pinning
 - name: fluent-bit
   sourceRepository: https://github.com/fluent/fluent-bit
   repository: fluent/fluent-bit

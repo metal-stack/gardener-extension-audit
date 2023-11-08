@@ -429,11 +429,6 @@ func (a *actuator) generateSecrets(ctx context.Context, log logr.Logger, cluster
 }
 
 func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.Secret, cluster *extensions.Cluster, shootAccessSecretName, namespace string) ([]client.Object, error) {
-	auditForwarderImage, err := imagevector.ImageVector().FindImage("audit-forwarder")
-	if err != nil {
-		return nil, fmt.Errorf("failed to find audit-forwarder image: %w", err)
-	}
-
 	fluentBitImage, err := imagevector.ImageVector().FindImage("fluent-bit")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find fluent-bit image: %w", err)
@@ -500,8 +495,10 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 
 		auditwebhookStatefulSet = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "audit-webhook-backend",
-				Namespace: namespace,
+				Name:        "audit-webhook-backend",
+				Namespace:   namespace,
+				Annotations: map[string]string{},
+				Labels:      map[string]string{},
 			},
 			Spec: appsv1.StatefulSetSpec{
 				Replicas:    pointer.Pointer(int32(2)),
@@ -674,6 +671,11 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 	}
 
 	if pointer.SafeDeref(auditConfig.Backends.ClusterForwarding).Enabled {
+		gardenerVpnGatewayImage, err := imagevector.ImageVector().FindImage("gardener-vpn-gateway")
+		if err != nil {
+			return nil, fmt.Errorf("failed to find gardener-vpn-gateway image: %w", err)
+		}
+
 		fluentbitConfigMap.Data["clusterforwarding.backend.conf"] = fluentbitconfig.Config{
 			Output: []fluentbitconfig.Output{
 				map[string]string{
@@ -712,7 +714,11 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			},
 		)
 
-		auditForwarder := &appsv1.Deployment{
+		auditwebhookStatefulSet.Spec.Template.Annotations["checksum/secret-audittailer-client"] = utils.ComputeSecretChecksum(secrets["audittailer-client"].Data)
+
+		auditwebhookStatefulSet.Spec.Template.Labels["networking.resources.gardener.cloud/to-audit-cluster-forwarding-vpn-gateway-tcp-9876"] = "allowed"
+
+		vpnGateway := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audit-cluster-forwarding-vpn-gateway",
 				Namespace: namespace,
@@ -727,67 +733,40 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							"app":                              "audit-cluster-forwarding-vpn-gateway",
-							"networking.gardener.cloud/to-dns": "allowed",
-							"networking.gardener.cloud/to-shoot-apiserver": "allowed",
-						},
-						Annotations: map[string]string{
-							"checksum/secret-audittailer-client": utils.ComputeSecretChecksum(secrets["audittailer-client"].Data),
+							"app": "audit-cluster-forwarding-vpn-gateway",
+
+							"networking.gardener.cloud/to-dns":                                "allowed",
+							"networking.gardener.cloud/to-shoot-apiserver":                    "allowed",
+							"networking.gardener.cloud/to-private-networks":                   "allowed",
+							"networking.gardener.cloud/to-public-networks":                    "allowed", // is this required?
+							"networking.gardener.cloud/to-runtime-apiserver":                  "allowed",
+							"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443":   "allowed",
+							"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-9443": "allowed",
 						},
 					},
 					Spec: corev1.PodSpec{
+						ServiceAccountName: "audit-cluster-forwarding-vpn-gateway",
 						Containers: []corev1.Container{
 							{
-								Name:  "audit-forwarder",
-								Image: auditForwarderImage.String(),
+								Name:            "gardener-vpn-gateway",
+								Image:           gardenerVpnGatewayImage.String(),
+								ImagePullPolicy: corev1.PullIfNotPresent,
 								Env: []corev1.EnvVar{
 									{
-										Name:  "AUDIT_KUBECFG",
+										Name:  "GATEWAY_SHOOT_KUBECONFIG",
 										Value: path.Join(gutil.VolumeMountPathGenericKubeconfig, "kubeconfig"),
 									},
 									{
-										Name:  "AUDIT_NAMESPACE",
+										Name:  "GATEWAY_SEED_NAMESPACE",
+										Value: cluster.ObjectMeta.Name,
+									},
+									{
+										Name:  "GATEWAY_NAMESPACE",
 										Value: v1alpha1.ShootAudittailerNamespace,
 									},
 									{
-										Name:  "AUDIT_SERVICE_NAME",
+										Name:  "GATEWAY_SERVICE_NAME",
 										Value: "audittailer",
-									},
-									{
-										Name:  "AUDIT_SECRET_NAME",
-										Value: secrets["audittailer-client"].Name,
-									},
-									{
-										Name:  "AUDIT_TLS_CA_FILE",
-										Value: "ca.crt",
-									},
-									{
-										Name:  "AUDIT_TLS_CRT_FILE",
-										Value: "tls.crt",
-									},
-									{
-										Name:  "AUDIT_TLS_KEY_FILE",
-										Value: "tls.key",
-									},
-									{
-										Name:  "AUDIT_TLS_VHOST",
-										Value: "audittailer",
-									},
-									{
-										Name:  "AUDIT_PROXY_HOST",
-										Value: "vpn-seed-server",
-									},
-									{
-										Name:  "AUDIT_PROXY_PORT",
-										Value: "9443",
-									},
-									{
-										Name:  "AUDIT_PROXY_CA_SECRET_NAME",
-										Value: "ca-vpn",
-									},
-									{
-										Name:  "AUDIT_PROXY_CLIENT_CERTS_SECRET_NAME",
-										Value: "http-proxy",
 									},
 								},
 							},
@@ -797,34 +776,74 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			},
 		}
 
-		if err := gutil.InjectGenericKubeconfig(auditForwarder, extensions.GenericTokenKubeconfigSecretNameFromCluster(cluster), shootAccessSecretName); err != nil {
+		if err := gutil.InjectGenericKubeconfig(vpnGateway, extensions.GenericTokenKubeconfigSecretNameFromCluster(cluster), shootAccessSecretName); err != nil {
 			return nil, err
 		}
 
-		auditforwarderService := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "audit-cluster-forwarding-vpn-gateway",
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app": "audit-cluster-forwarding-vpn-gateway",
+		clusterForwarderObjects := []client.Object{
+			vpnGateway,
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "audit-cluster-forwarding-vpn-gateway",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app": "audit-cluster-forwarding-vpn-gateway",
+					},
 				},
-			},
-			Spec: corev1.ServiceSpec{
-				Selector: map[string]string{
-					"app": "audit-cluster-forwarding-vpn-gateway",
-				},
-				Ports: []corev1.ServicePort{
-					{
-						Port:       9876,
-						TargetPort: intstr.FromInt(9876),
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{
+						"app": "audit-cluster-forwarding-vpn-gateway",
+					},
+					Ports: []corev1.ServicePort{
+						{
+							Port:       9876,
+							TargetPort: intstr.FromInt(9876),
+						},
 					},
 				},
 			},
-		}
-
-		objects = append(objects, auditForwarder, auditforwarderService)
-
-		auditforwarderNetworkpolicies := []client.Object{
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "audit-cluster-forwarding-vpn-gateway",
+					Namespace: namespace,
+				},
+			},
+			&rbacv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "audit-cluster-forwarding-vpn-gateway",
+					Namespace: namespace,
+				},
+				Rules: []rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{
+							"secrets",
+						},
+						Verbs: []string{
+							"get",
+							"list",
+						},
+					},
+				},
+			},
+			&rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "audit-cluster-forwarding-vpn-gateway",
+					Namespace: namespace,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "audit-cluster-forwarding-vpn-gateway",
+						Namespace: namespace,
+					},
+				},
+				RoleRef: rbacv1.RoleRef{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Role",
+					Name:     "audit-cluster-forwarding-vpn-gateway",
+				},
+			},
 			&networkingv1.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "allow-to-audit-cluster-forwarding-vpn-gateway-from-audit-webhook",
@@ -881,7 +900,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			},
 		}
 
-		objects = append(objects, auditforwarderNetworkpolicies...)
+		objects = append(objects, clusterForwarderObjects...)
 	}
 
 	if pointer.SafeDeref(auditConfig.Backends.Splunk).Enabled {
