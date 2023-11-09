@@ -21,7 +21,21 @@ spec:
         log:
           enabled: true
         clusterForwarding:
+          enabled: false
+        splunk:
           enabled: true
+          index: <splunk index>
+          host: splunk-endpoint.example.com
+          port: "443"
+          hecToken: <hec token>
+          caFile: |
+            -----BEGIN CERTIFICATE-----
+            <cert>
+            -----END CERTIFICATE-----
+            -----BEGIN CERTIFICATE-----
+            <cert>
+            -----END CERTIFICATE-----
+          tls: true
       # persistence:
       #   size: 10Gi
       # auditPolicy: |

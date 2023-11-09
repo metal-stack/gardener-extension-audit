@@ -220,6 +220,9 @@ rules:
     omitStages:
       - RequestReceived
 `
+	defaultPersitenceSize       = "1Gi"
+	defaultForwardingBufferSize = "900M"
+	defaultSplunkBufferSize     = "900M"
 )
 
 // NewActuator returns an actuator responsible for Extension resources.
@@ -261,7 +264,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 	}
 
 	if auditConfig.Persistence.Size == nil {
-		auditConfig.Persistence.Size = pointer.Pointer("1Gi")
+		auditConfig.Persistence.Size = pointer.Pointer(defaultPersitenceSize)
 	}
 
 	if auditConfig.AuditPolicy == nil {
@@ -621,25 +624,29 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			return nil, fmt.Errorf("failed to find gardener-vpn-gateway image: %w", err)
 		}
 
+		forwardingConfig := map[string]string{
+			"match":                    "audit",
+			"name":                     "forward",
+			"storage.total_limit_size": defaultForwardingBufferSize,
+			"host":                     "audit-cluster-forwarding-vpn-gateway",
+			"port":                     "9876",
+			"require_ack_response":     "True",
+			"compress":                 "gzip",
+			"tls":                      "On",
+			"tls.verify":               "On",
+			"tls.debug":                "2",
+			"tls.ca_file":              "/backends/cluster-forwarding/certs/ca.crt",
+			"tls.crt_file":             "/backends/cluster-forwarding/certs/tls.crt",
+			"tls.key_file":             "/backends/cluster-forwarding/certs/tls.key",
+			"tls.vhost":                "audittailer",
+		}
+
+		if auditConfig.Backends.ClusterForwarding.FilesystemBufferSize != "" {
+			forwardingConfig["storage.total_limit_size"] = auditConfig.Backends.ClusterForwarding.FilesystemBufferSize
+		}
+
 		fluentbitConfigMap.Data["clusterforwarding.backend.conf"] = fluentbitconfig.Config{
-			Output: []fluentbitconfig.Output{
-				map[string]string{
-					"match":                    "audit",
-					"name":                     "forward",
-					"storage.total_limit_size": "100M",
-					"host":                     "audit-cluster-forwarding-vpn-gateway",
-					"port":                     "9876",
-					"require_ack_response":     "True",
-					"compress":                 "gzip",
-					"tls":                      "On",
-					"tls.verify":               "On",
-					"tls.debug":                "2",
-					"tls.ca_file":              "/backends/cluster-forwarding/certs/ca.crt",
-					"tls.crt_file":             "/backends/cluster-forwarding/certs/tls.crt",
-					"tls.key_file":             "/backends/cluster-forwarding/certs/tls.key",
-					"tls.vhost":                "audittailer",
-				},
-			},
+			Output: []fluentbitconfig.Output{forwardingConfig},
 		}.Generate()
 
 		auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -798,17 +805,21 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 	if pointer.SafeDeref(auditConfig.Backends.Splunk).Enabled {
 		splunkConfig := map[string]string{
 			"match":                    "audit",
-			"name":                     "forward",
-			"storage.total_limit_size": "100M",
+			"name":                     "splunk",
+			"storage.total_limit_size": defaultSplunkBufferSize,
 			"host":                     auditConfig.Backends.Splunk.Host,
 			"port":                     auditConfig.Backends.Splunk.Port,
-			"splunk_token":             auditConfig.Backends.Splunk.Token,
+			"splunk_token":             "${SPLUNK_HEC_TOKEN}",
 			"retry_limit":              "False",
 			"splunk_send_raw":          "Off",
-			"event_source":             "${MY_POD_NAME}",
+			"event_source":             "statefulset:audit-webhook-backend",
 			"event_sourcetype":         "kube:apiserver:auditlog",
 			"event_index":              auditConfig.Backends.Splunk.Index,
 			"event_host":               cluster.ObjectMeta.Name,
+		}
+
+		if auditConfig.Backends.Splunk.FilesystemBufferSize != "" {
+			splunkConfig["storage.total_limit_size"] = auditConfig.Backends.Splunk.FilesystemBufferSize
 		}
 
 		if auditConfig.Backends.Splunk.TlsEnabled {
@@ -825,29 +836,50 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 
 		splunkSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "audit-webhook-config",
+				Name:      "audit-splunk-secret",
 				Namespace: namespace,
 			},
 			StringData: map[string]string{
-				"audit-webhook-config.yaml": string(kubeconfig),
+				"splunk_hec_token": auditConfig.Backends.Splunk.Token,
 			},
 		}
 
-		auditwebhookStatefulSet.Spec.Template.Spec.Volumes = append(auditwebhookStatefulSet.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "splunk-config",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: splunkSecret.Name,
+		if auditConfig.Backends.Splunk.TlsEnabled {
+			splunkSecret.StringData["ca.crt"] = auditConfig.Backends.Splunk.CaFile
+
+			auditwebhookStatefulSet.Spec.Template.Spec.Volumes = append(auditwebhookStatefulSet.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: "splunk-secret",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: splunkSecret.Name,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "ca.crt",
+								Path: "ca.crt",
+							},
+						},
+					},
 				},
-			},
-		})
-		auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "splunk-config",
-			MountPath: "/backends/splunk/certs",
-		})
+			})
+			auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				Name:      "splunk-secret",
+				MountPath: "/backends/splunk/certs",
+			})
+			auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].Env = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+				Name: "SPLUNK_HEC_TOKEN",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: splunkSecret.ObjectMeta.Name,
+						},
+						Key: "splunk_hec_token",
+					},
+				},
+			})
 
-		auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/secret-splunk-ca"] = utils.ComputeSecretChecksum(splunkSecret.Data)
+			auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/splunk-secret"] = utils.ComputeSecretChecksum(splunkSecret.Data)
 
+		}
 		objects = append(objects, splunkSecret)
 	}
 
