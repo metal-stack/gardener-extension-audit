@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,7 +28,10 @@ type AuditConfig struct {
 
 	// Persistence contains options about the persistent volume used for buffering the audit data
 	// on the filesystem.
-	Persistence *AuditPersistence `json:"persistence,omitempty"`
+	Persistence AuditPersistence `json:"persistence,omitempty"`
+
+	// Replicas are the amount of replicas used for the buffering audit pods.
+	Replicas *int32 `json:"replicas,omitempty"`
 
 	// WebhookMode allows to select which auditing mode - batching or blocking - should be used.
 	WebhookMode AuditWebhookMode `json:"webhookMode,omitempty"`
@@ -42,10 +46,12 @@ type AuditConfig struct {
 
 type AuditPersistence struct {
 	// Size is the size of the PVC to be used for each replica of the statefulset.
-	Size *string `json:"size,omitempty"`
+	// +optional
+	Size *resource.Quantity `json:"size,omitempty"`
 
 	// StorageClassName is the name of the storage class to be used for the PVC. If empty, the default
 	// storage class is used.
+	// +optional
 	StorageClassName *string `json:"storageClassName,omitempty"`
 }
 

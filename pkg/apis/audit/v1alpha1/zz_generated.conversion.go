@@ -13,6 +13,7 @@ import (
 	unsafe "unsafe"
 
 	audit "github.com/metal-stack/gardener-extension-audit/pkg/apis/audit"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -89,6 +90,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_AuditBackendClusterForwarding_To_audit_AuditBackendClusterForwarding(in *AuditBackendClusterForwarding, out *audit.AuditBackendClusterForwarding, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FilesystemBufferSize = in.FilesystemBufferSize
 	return nil
 }
 
@@ -99,6 +101,7 @@ func Convert_v1alpha1_AuditBackendClusterForwarding_To_audit_AuditBackendCluster
 
 func autoConvert_audit_AuditBackendClusterForwarding_To_v1alpha1_AuditBackendClusterForwarding(in *audit.AuditBackendClusterForwarding, out *AuditBackendClusterForwarding, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FilesystemBufferSize = in.FilesystemBufferSize
 	return nil
 }
 
@@ -129,6 +132,7 @@ func Convert_audit_AuditBackendLog_To_v1alpha1_AuditBackendLog(in *audit.AuditBa
 
 func autoConvert_v1alpha1_AuditBackendSplunk_To_audit_AuditBackendSplunk(in *AuditBackendSplunk, out *audit.AuditBackendSplunk, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FilesystemBufferSize = in.FilesystemBufferSize
 	out.Index = in.Index
 	out.Host = in.Host
 	out.Port = in.Port
@@ -145,6 +149,7 @@ func Convert_v1alpha1_AuditBackendSplunk_To_audit_AuditBackendSplunk(in *AuditBa
 
 func autoConvert_audit_AuditBackendSplunk_To_v1alpha1_AuditBackendSplunk(in *audit.AuditBackendSplunk, out *AuditBackendSplunk, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FilesystemBufferSize = in.FilesystemBufferSize
 	out.Index = in.Index
 	out.Host = in.Host
 	out.Port = in.Port
@@ -184,7 +189,10 @@ func Convert_audit_AuditBackends_To_v1alpha1_AuditBackends(in *audit.AuditBacken
 }
 
 func autoConvert_v1alpha1_AuditConfig_To_audit_AuditConfig(in *AuditConfig, out *audit.AuditConfig, s conversion.Scope) error {
-	out.Persistence = (*audit.AuditPersistence)(unsafe.Pointer(in.Persistence))
+	if err := Convert_v1alpha1_AuditPersistence_To_audit_AuditPersistence(&in.Persistence, &out.Persistence, s); err != nil {
+		return err
+	}
+	out.Replicas = (*int32)(unsafe.Pointer(in.Replicas))
 	out.WebhookMode = audit.AuditWebhookMode(in.WebhookMode)
 	out.AuditPolicy = (*string)(unsafe.Pointer(in.AuditPolicy))
 	out.Backends = (*audit.AuditBackends)(unsafe.Pointer(in.Backends))
@@ -197,7 +205,10 @@ func Convert_v1alpha1_AuditConfig_To_audit_AuditConfig(in *AuditConfig, out *aud
 }
 
 func autoConvert_audit_AuditConfig_To_v1alpha1_AuditConfig(in *audit.AuditConfig, out *AuditConfig, s conversion.Scope) error {
-	out.Persistence = (*AuditPersistence)(unsafe.Pointer(in.Persistence))
+	if err := Convert_audit_AuditPersistence_To_v1alpha1_AuditPersistence(&in.Persistence, &out.Persistence, s); err != nil {
+		return err
+	}
+	out.Replicas = (*int32)(unsafe.Pointer(in.Replicas))
 	out.WebhookMode = AuditWebhookMode(in.WebhookMode)
 	out.AuditPolicy = (*string)(unsafe.Pointer(in.AuditPolicy))
 	out.Backends = (*AuditBackends)(unsafe.Pointer(in.Backends))
@@ -210,7 +221,7 @@ func Convert_audit_AuditConfig_To_v1alpha1_AuditConfig(in *audit.AuditConfig, ou
 }
 
 func autoConvert_v1alpha1_AuditPersistence_To_audit_AuditPersistence(in *AuditPersistence, out *audit.AuditPersistence, s conversion.Scope) error {
-	out.Size = (*string)(unsafe.Pointer(in.Size))
+	out.Size = (*resource.Quantity)(unsafe.Pointer(in.Size))
 	out.StorageClassName = (*string)(unsafe.Pointer(in.StorageClassName))
 	return nil
 }
@@ -221,7 +232,7 @@ func Convert_v1alpha1_AuditPersistence_To_audit_AuditPersistence(in *AuditPersis
 }
 
 func autoConvert_audit_AuditPersistence_To_v1alpha1_AuditPersistence(in *audit.AuditPersistence, out *AuditPersistence, s conversion.Scope) error {
-	out.Size = (*string)(unsafe.Pointer(in.Size))
+	out.Size = (*resource.Quantity)(unsafe.Pointer(in.Size))
 	out.StorageClassName = (*string)(unsafe.Pointer(in.StorageClassName))
 	return nil
 }

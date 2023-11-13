@@ -96,10 +96,11 @@ func (in *AuditBackends) DeepCopy() *AuditBackends {
 func (in *AuditConfig) DeepCopyInto(out *AuditConfig) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	if in.Persistence != nil {
-		in, out := &in.Persistence, &out.Persistence
-		*out = new(AuditPersistence)
-		(*in).DeepCopyInto(*out)
+	in.Persistence.DeepCopyInto(&out.Persistence)
+	if in.Replicas != nil {
+		in, out := &in.Replicas, &out.Replicas
+		*out = new(int32)
+		**out = **in
 	}
 	if in.AuditPolicy != nil {
 		in, out := &in.AuditPolicy, &out.AuditPolicy
@@ -137,8 +138,8 @@ func (in *AuditPersistence) DeepCopyInto(out *AuditPersistence) {
 	*out = *in
 	if in.Size != nil {
 		in, out := &in.Size, &out.Size
-		*out = new(string)
-		**out = **in
+		x := (*in).DeepCopy()
+		*out = &x
 	}
 	if in.StorageClassName != nil {
 		in, out := &in.StorageClassName, &out.StorageClassName

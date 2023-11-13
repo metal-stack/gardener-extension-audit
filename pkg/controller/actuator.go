@@ -37,6 +37,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -259,14 +260,6 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		}
 	}
 
-	if auditConfig.Persistence == nil {
-		auditConfig.Persistence = &v1alpha1.AuditPersistence{}
-	}
-
-	if auditConfig.Persistence.Size == nil {
-		auditConfig.Persistence.Size = pointer.Pointer(defaultPersitenceSize)
-	}
-
 	if auditConfig.AuditPolicy == nil {
 		auditConfig.AuditPolicy = pointer.Pointer(defaultAuditPolicy)
 	}
@@ -441,11 +434,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		return nil, fmt.Errorf("unable to generate webhook kubeconfig: %w", err)
 	}
 
-	size, err := resource.ParseQuantity(pointer.SafeDeref(auditConfig.Persistence.Size))
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse persistence size as kubernetes quantity: %w", err)
-	}
-
 	var (
 		fluentbitConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -461,6 +449,9 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						"storage.checksum":          "off",
 						"storage.max_chunks_up":     "128",
 						"storage.backlog.mem_limit": "5M",
+						"http_server":               "on",
+						"http_listen":               "0.0.0.0",
+						"http_port":                 "2020",
 					},
 					Input: []fluentbitconfig.Input{
 						map[string]string{
@@ -503,7 +494,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Labels:      map[string]string{},
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Replicas:    pointer.Pointer(int32(2)),
+				Replicas:    auditConfig.Replicas,
 				ServiceName: "audit-webhook-backend",
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -522,6 +513,9 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						},
 						Annotations: map[string]string{
 							"scheduler.alpha.kubernetes.io/critical-pod": "",
+							"prometheus.io/scrape":                       "true",
+							"prometheus.io/port":                         "2020",
+							"prometheus.io/path":                         "/api/v1/metrics/prometheus",
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -533,6 +527,37 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 									"--storage_path=/data",
 									"--config=/config/fluent-bit.conf",
 								},
+								Ports: []corev1.ContainerPort{
+									{
+										ContainerPort: 2020,
+									},
+								},
+								ReadinessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path: "/api/v1/metrics/prometheus",
+											Port: intstr.FromInt(2020),
+										},
+									},
+								},
+								LivenessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path: "/",
+											Port: intstr.FromInt(2020),
+										},
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("200m"),
+										corev1.ResourceMemory: resource.MustParse("512Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1"),
+										corev1.ResourceMemory: resource.MustParse("1Gi"), // should never be reached because max_chunks_up and chunk_size is smaller than 1Gi
+									},
+								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      "config",
@@ -541,6 +566,23 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 									{
 										Name:      "audit-data",
 										MountPath: "/data",
+									},
+								},
+							},
+						},
+						Affinity: &corev1.Affinity{
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+									{
+										Weight: 100,
+										PodAffinityTerm: corev1.PodAffinityTerm{
+											LabelSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"app": "audit-webhook-backend",
+												},
+											},
+											TopologyKey: "kubernetes.io/hostname",
+										},
 									},
 								},
 							},
@@ -571,7 +613,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 							StorageClassName: auditConfig.Persistence.StorageClassName,
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceStorage: size,
+									corev1.ResourceStorage: *auditConfig.Persistence.Size,
 								},
 							},
 						},
@@ -602,6 +644,19 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						Protocol: corev1.ProtocolTCP,
 					},
 				},
+			},
+		},
+		&policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-webhook-backend",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "audit-webhook-backend",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MinAvailable: utils.IntStrPtrFromInt(1),
+				Selector:     auditwebhookStatefulSet.Spec.Selector,
 			},
 		},
 	}

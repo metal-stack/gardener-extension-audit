@@ -17,5 +17,11 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&AuditConfig{}, func(obj interface{}) { SetObjectDefaults_AuditConfig(obj.(*AuditConfig)) })
 	return nil
+}
+
+func SetObjectDefaults_AuditConfig(in *AuditConfig) {
+	SetDefaults_AuditConfig(in)
+	SetDefaults_AuditPersistence(&in.Persistence)
 }
