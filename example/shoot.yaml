@@ -1,3 +1,4 @@
+---
 apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
@@ -17,41 +18,25 @@ spec:
       apiVersion: audit.metal.extensions.gardener.cloud/v1alpha1
       kind: AuditConfig
       webhookMode: blocking
+      # persistence:
+      #   size: 10Gi
       backends:
         log:
           enabled: true
-        clusterForwarding:
-          enabled: false
-        splunk:
-          enabled: true
-          index: <splunk index>
-          host: splunk-endpoint.example.com
-          port: "443"
-          hecToken: <hec token>
-          caFile: |
-            -----BEGIN CERTIFICATE-----
-            <cert>
-            -----END CERTIFICATE-----
-            -----BEGIN CERTIFICATE-----
-            <cert>
-            -----END CERTIFICATE-----
-          tls: true
-      # persistence:
-      #   size: 10Gi
-      # auditPolicy: |
-      #   apiVersion: audit.k8s.io/v1
-      #   kind: Policy
-      #   omitStages:
-      #     - "RequestReceived"
-      #   rules:
-      #     - level: RequestResponse
-      #       resources:
-      #       - group: ""
-      #         resources: ["pods"]
-      #     - level: Metadata
-      #       resources:
-      #       - group: ""
-      #         resources: ["pods/log", "pods/status"]
+        # clusterForwarding:
+        #   enabled: true
+        # splunk:
+        #   enabled: true
+        #   index: <splunk index>
+        #   host: splunk-endpoint.example.com
+        #   port: "443"
+        #   secretResourceName: splunk-secret
+        #   tls: true
+  # resources:
+  #   - name: splunk-secret
+  #     resourceRef:
+  #       kind: Secret
+  #       name: splunk-secret
   networking:
     type: calico
     providerConfig:
@@ -78,3 +63,7 @@ spec:
       registryBurst: 20
       protectKernelDefaults: true
       streamingConnectionIdleTimeout: 5m
+    # kubeAPIServer:
+    #   auditConfig:
+    #     auditPolicy:
+    #       configMapRef: custom-audit-policy

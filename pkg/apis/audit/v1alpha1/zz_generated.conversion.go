@@ -89,6 +89,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_AuditBackendClusterForwarding_To_audit_AuditBackendClusterForwarding(in *AuditBackendClusterForwarding, out *audit.AuditBackendClusterForwarding, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FilesystemBufferSize = in.FilesystemBufferSize
 	return nil
 }
 
@@ -99,6 +100,7 @@ func Convert_v1alpha1_AuditBackendClusterForwarding_To_audit_AuditBackendCluster
 
 func autoConvert_audit_AuditBackendClusterForwarding_To_v1alpha1_AuditBackendClusterForwarding(in *audit.AuditBackendClusterForwarding, out *AuditBackendClusterForwarding, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FilesystemBufferSize = in.FilesystemBufferSize
 	return nil
 }
 
@@ -129,11 +131,11 @@ func Convert_audit_AuditBackendLog_To_v1alpha1_AuditBackendLog(in *audit.AuditBa
 
 func autoConvert_v1alpha1_AuditBackendSplunk_To_audit_AuditBackendSplunk(in *AuditBackendSplunk, out *audit.AuditBackendSplunk, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FilesystemBufferSize = in.FilesystemBufferSize
 	out.Index = in.Index
 	out.Host = in.Host
 	out.Port = in.Port
-	out.Token = in.Token
-	out.CaFile = in.CaFile
+	out.SecretResourceName = in.SecretResourceName
 	out.TlsEnabled = in.TlsEnabled
 	return nil
 }
@@ -145,11 +147,11 @@ func Convert_v1alpha1_AuditBackendSplunk_To_audit_AuditBackendSplunk(in *AuditBa
 
 func autoConvert_audit_AuditBackendSplunk_To_v1alpha1_AuditBackendSplunk(in *audit.AuditBackendSplunk, out *AuditBackendSplunk, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.FilesystemBufferSize = in.FilesystemBufferSize
 	out.Index = in.Index
 	out.Host = in.Host
 	out.Port = in.Port
-	out.Token = in.Token
-	out.CaFile = in.CaFile
+	out.SecretResourceName = in.SecretResourceName
 	out.TlsEnabled = in.TlsEnabled
 	return nil
 }
@@ -186,7 +188,6 @@ func Convert_audit_AuditBackends_To_v1alpha1_AuditBackends(in *audit.AuditBacken
 func autoConvert_v1alpha1_AuditConfig_To_audit_AuditConfig(in *AuditConfig, out *audit.AuditConfig, s conversion.Scope) error {
 	out.Persistence = (*audit.AuditPersistence)(unsafe.Pointer(in.Persistence))
 	out.WebhookMode = audit.AuditWebhookMode(in.WebhookMode)
-	out.AuditPolicy = (*string)(unsafe.Pointer(in.AuditPolicy))
 	out.Backends = (*audit.AuditBackends)(unsafe.Pointer(in.Backends))
 	return nil
 }
@@ -199,7 +200,6 @@ func Convert_v1alpha1_AuditConfig_To_audit_AuditConfig(in *AuditConfig, out *aud
 func autoConvert_audit_AuditConfig_To_v1alpha1_AuditConfig(in *audit.AuditConfig, out *AuditConfig, s conversion.Scope) error {
 	out.Persistence = (*AuditPersistence)(unsafe.Pointer(in.Persistence))
 	out.WebhookMode = AuditWebhookMode(in.WebhookMode)
-	out.AuditPolicy = (*string)(unsafe.Pointer(in.AuditPolicy))
 	out.Backends = (*AuditBackends)(unsafe.Pointer(in.Backends))
 	return nil
 }

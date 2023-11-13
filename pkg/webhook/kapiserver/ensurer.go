@@ -99,11 +99,6 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 
 func ensureVolumeMounts(c *corev1.Container) {
 	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, corev1.VolumeMount{
-		Name:      "audit-policy",
-		ReadOnly:  true,
-		MountPath: "/etc/audit-webhook/policy",
-	})
-	c.VolumeMounts = extensionswebhook.EnsureVolumeMountWithName(c.VolumeMounts, corev1.VolumeMount{
 		Name:      "audit-webhook-config",
 		ReadOnly:  true,
 		MountPath: "/etc/audit-webhook/config",
@@ -111,16 +106,6 @@ func ensureVolumeMounts(c *corev1.Container) {
 }
 
 func ensureVolumes(ps *corev1.PodSpec) {
-	ps.Volumes = extensionswebhook.EnsureVolumeWithName(ps.Volumes, corev1.Volume{
-		Name: "audit-policy",
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: "audit-policy",
-				},
-			},
-		},
-	})
 	ps.Volumes = extensionswebhook.EnsureVolumeWithName(ps.Volumes, corev1.Volume{
 		Name: "audit-webhook-config",
 		VolumeSource: corev1.VolumeSource{
@@ -132,7 +117,6 @@ func ensureVolumes(ps *corev1.PodSpec) {
 }
 
 func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha1.AuditWebhookMode) {
-	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-policy-file=", "/etc/audit-webhook/policy/audit-policy.yaml")
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-config-file=", "/etc/audit-webhook/config/audit-webhook-config.yaml")
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-mode=", string(webhookMode))
 }
