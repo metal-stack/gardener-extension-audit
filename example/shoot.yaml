@@ -66,4 +66,5 @@ spec:
     # kubeAPIServer:
     #   auditConfig:
     #     auditPolicy:
-    #       configMapRef: custom-audit-policy
+    #       configMapRef:
+    #         name: custom-audit-policy

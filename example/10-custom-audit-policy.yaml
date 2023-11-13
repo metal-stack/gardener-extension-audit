@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: custom-audit-policy
   namespace: garden-local
-stringData:
+data:
   policy: |
     apiVersion: audit.k8s.io/v1
     kind: Policy
