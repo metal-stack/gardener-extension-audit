@@ -679,7 +679,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			},
 		})
 
-		caFile := splunkSecret.Data[v1alpha1.SplunkSecretCaFileKey]
+		caFile := splunkSecretFromResources.Data[v1alpha1.SplunkSecretCaFileKey]
 		if len(caFile) > 0 {
 			splunkConfig["tls.ca_file "] = "/backends/splunk/certs/ca.crt"
 
