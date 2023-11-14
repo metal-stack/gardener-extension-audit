@@ -41,5 +41,7 @@ config:
     qps: 100
     burst: 130
 
+  defaultBackends:
+
 gardener:
   version: ""
