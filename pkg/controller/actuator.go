@@ -221,9 +221,6 @@ rules:
     omitStages:
       - RequestReceived
 `
-	defaultPersitenceSize       = "1Gi"
-	defaultForwardingBufferSize = "900M"
-	defaultSplunkBufferSize     = "900M"
 )
 
 // NewActuator returns an actuator responsible for Extension resources.
@@ -682,7 +679,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		forwardingConfig := map[string]string{
 			"match":                    "audit",
 			"name":                     "forward",
-			"storage.total_limit_size": defaultForwardingBufferSize,
+			"storage.total_limit_size": auditConfig.Backends.ClusterForwarding.FilesystemBufferSize,
 			"host":                     "audit-cluster-forwarding-vpn-gateway",
 			"port":                     "9876",
 			"require_ack_response":     "True",
@@ -694,10 +691,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			"tls.crt_file":             "/backends/cluster-forwarding/certs/tls.crt",
 			"tls.key_file":             "/backends/cluster-forwarding/certs/tls.key",
 			"tls.vhost":                "audittailer",
-		}
-
-		if auditConfig.Backends.ClusterForwarding.FilesystemBufferSize != "" {
-			forwardingConfig["storage.total_limit_size"] = auditConfig.Backends.ClusterForwarding.FilesystemBufferSize
 		}
 
 		fluentbitConfigMap.Data["clusterforwarding.backend.conf"] = fluentbitconfig.Config{
@@ -861,7 +854,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		splunkConfig := map[string]string{
 			"match":                    "audit",
 			"name":                     "splunk",
-			"storage.total_limit_size": defaultSplunkBufferSize,
+			"storage.total_limit_size": auditConfig.Backends.Splunk.FilesystemBufferSize,
 			"host":                     auditConfig.Backends.Splunk.Host,
 			"port":                     auditConfig.Backends.Splunk.Port,
 			"splunk_token":             "${SPLUNK_HEC_TOKEN}",
@@ -871,10 +864,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			"event_sourcetype":         "kube:apiserver:auditlog",
 			"event_index":              auditConfig.Backends.Splunk.Index,
 			"event_host":               cluster.ObjectMeta.Name,
-		}
-
-		if auditConfig.Backends.Splunk.FilesystemBufferSize != "" {
-			splunkConfig["storage.total_limit_size"] = auditConfig.Backends.Splunk.FilesystemBufferSize
 		}
 
 		if auditConfig.Backends.Splunk.TlsEnabled {
