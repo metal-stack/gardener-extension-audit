@@ -84,6 +84,7 @@ rules:
   - leases
   verbs:
   - create
+  - update
   - list
   - watch
 - apiGroups:

@@ -8,7 +8,7 @@ import (
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
-	"github.com/metal-stack/gardener-extension-audit/pkg/controller"
+	"github.com/metal-stack/gardener-extension-audit/pkg/controller/audit"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	"github.com/go-logr/logr"
@@ -59,7 +59,7 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 
 	ex := &extensionsv1alpha1.Extension{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controller.Type,
+			Name:      audit.Type,
 			Namespace: namespace,
 		},
 	}

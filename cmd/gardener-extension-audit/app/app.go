@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/install"
-	"github.com/metal-stack/gardener-extension-audit/pkg/controller"
+	"github.com/metal-stack/gardener-extension-audit/pkg/controller/audit"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	heartbeatcontroller "github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
@@ -74,9 +74,9 @@ func (o *Options) run(ctx context.Context) error {
 	}
 
 	ctrlConfig := o.auditOptions.Completed()
-	ctrlConfig.Apply(&controller.DefaultAddOptions.Config)
-	o.controllerOptions.Completed().Apply(&controller.DefaultAddOptions.ControllerOptions)
-	o.reconcileOptions.Completed().Apply(&controller.DefaultAddOptions.IgnoreOperationAnnotation)
+	ctrlConfig.Apply(&audit.DefaultAddOptions.Config)
+	o.controllerOptions.Completed().Apply(&audit.DefaultAddOptions.ControllerOptions)
+	o.reconcileOptions.Completed().Apply(&audit.DefaultAddOptions.IgnoreOperationAnnotation)
 	o.heartbeatOptions.Completed().Apply(&heartbeatcontroller.DefaultAddOptions)
 
 	if err := o.controllerSwitches.Completed().AddToManager(mgr); err != nil {

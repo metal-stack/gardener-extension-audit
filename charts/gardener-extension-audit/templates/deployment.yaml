@@ -22,6 +22,7 @@ spec:
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed
         networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
+        networking.resources.gardener.cloud/to-all-shoots-audit-webhook-backend-tcp-2020: allowed
 {{ include "labels" . | indent 8 }}
     spec:
       containers:
@@ -37,6 +38,17 @@ spec:
         - --webhook-config-namespace={{ .Release.Namespace }}
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
         - --disable-controllers={{ .Values.disableControllers | join "," }}
+        {{- if .Values.metricsPort }}
+        - --metrics-bind-address=:{{ .Values.metricsPort }}
+        {{- end }}
+        {{- if .Values.healthPort }}
+        - --health-bind-address=:{{ .Values.healthPort }}
+        {{- end }}
+        {{- if .Values.gardener.version }}
+        - --gardener-version={{ .Values.gardener.version }}
+        {{- end }}
+        - --log-level={{ .Values.logLevel | default "info" }}
+        - --log-format={{ .Values.logFormat | default "json" }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:

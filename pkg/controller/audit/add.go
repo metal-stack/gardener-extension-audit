@@ -1,4 +1,4 @@
-package controller
+package audit
 
 import (
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"

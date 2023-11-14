@@ -1,4 +1,4 @@
-package controller
+package audit
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/config"
-	"github.com/metal-stack/gardener-extension-audit/pkg/controller/fluentbitconfig"
+	"github.com/metal-stack/gardener-extension-audit/pkg/fluentbitconfig"
 	"github.com/metal-stack/gardener-extension-audit/pkg/imagevector"
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -274,15 +274,22 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			Data: map[string]string{
 				"fluent-bit.conf": fluentbitconfig.Config{
 					Service: map[string]string{
-						"log_level":                 "info",
+						"log_level": "info",
+
+						"http_server": "on",
+						"http_listen": "0.0.0.0",
+						"http_port":   "2020",
+
 						"storage.path":              "/data/",
 						"storage.sync":              "normal",
 						"storage.checksum":          "off",
 						"storage.max_chunks_up":     "128",
 						"storage.backlog.mem_limit": "5M",
-						"http_server":               "on",
-						"http_listen":               "0.0.0.0",
-						"http_port":                 "2020",
+
+						"health_check":           "on",
+						"hc_errors_count":        "0",
+						"hc_retry_failure_count": "0",
+						"hc_period":              "60",
 					},
 					Input: []fluentbitconfig.Input{
 						map[string]string{
@@ -333,10 +340,11 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 							"networking.resources.gardener.cloud/to-audit-cluster-forwarding-vpn-gateway-tcp-9876": "allowed",
 						},
 						Annotations: map[string]string{
-							"scheduler.alpha.kubernetes.io/critical-pod": "",
-							"prometheus.io/scrape":                       "true",
-							"prometheus.io/port":                         "2020",
-							"prometheus.io/path":                         "/api/v1/metrics/prometheus",
+							"scheduler.alpha.kubernetes.io/critical-pod":              "",
+							"networking.resources.gardener.cloud/to-world-from-ports": `[{"port":2020,"protocol":"TCP"}]`,
+							"prometheus.io/scrape":                                    "true",
+							"prometheus.io/port":                                      "2020",
+							"prometheus.io/path":                                      "/api/v1/metrics/prometheus",
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -452,6 +460,10 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audit-webhook-backend",
 				Namespace: namespace,
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
+					"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"gardener.cloud/role":"extension"}}]`,
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Selector: map[string]string{
@@ -461,6 +473,11 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 					{
 						Name:     "http",
 						Port:     9880,
+						Protocol: corev1.ProtocolTCP,
+					},
+					{
+						Name:     "api",
+						Port:     2020,
 						Protocol: corev1.ProtocolTCP,
 					},
 				},
