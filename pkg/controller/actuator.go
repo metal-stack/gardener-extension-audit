@@ -494,7 +494,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Labels:      map[string]string{},
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Replicas:    auditConfig.Replicas,
+				Replicas:    getReplicas(cluster, auditConfig.Replicas),
 				ServiceName: "audit-webhook-backend",
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -731,7 +731,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Namespace: namespace,
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Pointer(int32(1)),
+				Replicas: getReplicas(cluster, pointer.Pointer(int32(1))),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app": "audit-cluster-forwarding-vpn-gateway",
@@ -1215,4 +1215,12 @@ func shootObjects(secrets map[string]*corev1.Secret) ([]client.Object, error) {
 			},
 		},
 	}, nil
+}
+
+func getReplicas(cluster *extensions.Cluster, wokenUp *int32) *int32 {
+	if controller.IsHibernated(cluster) {
+		return pointer.Pointer(int32(0))
+	}
+
+	return wokenUp
 }
