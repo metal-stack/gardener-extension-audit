@@ -66,7 +66,7 @@ type AuditBackendClusterForwarding struct {
 	Enabled bool
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file sytem buffer.
-	FilesystemBufferSize string
+	FilesystemBufferSize *string
 }
 
 type AuditBackendSplunk struct {
@@ -74,7 +74,7 @@ type AuditBackendSplunk struct {
 	Enabled bool
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file sytem buffer.
-	FilesystemBufferSize string
+	FilesystemBufferSize *string
 
 	// Index is the splunk index that should be used.
 	Index string

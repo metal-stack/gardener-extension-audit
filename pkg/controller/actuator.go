@@ -502,7 +502,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		forwardingConfig := map[string]string{
 			"match":                    "audit",
 			"name":                     "forward",
-			"storage.total_limit_size": auditConfig.Backends.ClusterForwarding.FilesystemBufferSize,
+			"storage.total_limit_size": pointer.SafeDeref(auditConfig.Backends.ClusterForwarding.FilesystemBufferSize),
 			"host":                     "audit-cluster-forwarding-vpn-gateway",
 			"port":                     "9876",
 			"require_ack_response":     "True",
@@ -677,7 +677,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		splunkConfig := map[string]string{
 			"match":                    "audit",
 			"name":                     "splunk",
-			"storage.total_limit_size": auditConfig.Backends.Splunk.FilesystemBufferSize,
+			"storage.total_limit_size": pointer.SafeDeref(auditConfig.Backends.Splunk.FilesystemBufferSize),
 			"host":                     auditConfig.Backends.Splunk.Host,
 			"port":                     auditConfig.Backends.Splunk.Port,
 			"splunk_token":             "${SPLUNK_HEC_TOKEN}",

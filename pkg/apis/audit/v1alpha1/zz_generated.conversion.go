@@ -90,7 +90,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_AuditBackendClusterForwarding_To_audit_AuditBackendClusterForwarding(in *AuditBackendClusterForwarding, out *audit.AuditBackendClusterForwarding, s conversion.Scope) error {
 	out.Enabled = in.Enabled
-	out.FilesystemBufferSize = in.FilesystemBufferSize
+	out.FilesystemBufferSize = (*string)(unsafe.Pointer(in.FilesystemBufferSize))
 	return nil
 }
 
@@ -101,7 +101,7 @@ func Convert_v1alpha1_AuditBackendClusterForwarding_To_audit_AuditBackendCluster
 
 func autoConvert_audit_AuditBackendClusterForwarding_To_v1alpha1_AuditBackendClusterForwarding(in *audit.AuditBackendClusterForwarding, out *AuditBackendClusterForwarding, s conversion.Scope) error {
 	out.Enabled = in.Enabled
-	out.FilesystemBufferSize = in.FilesystemBufferSize
+	out.FilesystemBufferSize = (*string)(unsafe.Pointer(in.FilesystemBufferSize))
 	return nil
 }
 
@@ -132,7 +132,7 @@ func Convert_audit_AuditBackendLog_To_v1alpha1_AuditBackendLog(in *audit.AuditBa
 
 func autoConvert_v1alpha1_AuditBackendSplunk_To_audit_AuditBackendSplunk(in *AuditBackendSplunk, out *audit.AuditBackendSplunk, s conversion.Scope) error {
 	out.Enabled = in.Enabled
-	out.FilesystemBufferSize = in.FilesystemBufferSize
+	out.FilesystemBufferSize = (*string)(unsafe.Pointer(in.FilesystemBufferSize))
 	out.Index = in.Index
 	out.Host = in.Host
 	out.Port = in.Port
@@ -148,7 +148,7 @@ func Convert_v1alpha1_AuditBackendSplunk_To_audit_AuditBackendSplunk(in *AuditBa
 
 func autoConvert_audit_AuditBackendSplunk_To_v1alpha1_AuditBackendSplunk(in *audit.AuditBackendSplunk, out *AuditBackendSplunk, s conversion.Scope) error {
 	out.Enabled = in.Enabled
-	out.FilesystemBufferSize = in.FilesystemBufferSize
+	out.FilesystemBufferSize = (*string)(unsafe.Pointer(in.FilesystemBufferSize))
 	out.Index = in.Index
 	out.Host = in.Host
 	out.Port = in.Port

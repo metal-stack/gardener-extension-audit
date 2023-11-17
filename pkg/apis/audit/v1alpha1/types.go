@@ -31,7 +31,7 @@ type AuditConfig struct {
 
 	// Persistence contains options about the persistent volume used for buffering the audit data
 	// on the filesystem.
-	Persistence AuditPersistence `json:"persistence,omitempty"`
+	Persistence AuditPersistence `json:"persistence"`
 
 	// Replicas are the amount of replicas used for the buffering audit pods.
 	// +optional
@@ -88,14 +88,14 @@ type AuditBackendClusterForwarding struct {
 	Enabled bool `json:"enabled"`
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file sytem buffer.
-	FilesystemBufferSize string `json:"bufferSize,omitempty"`
+	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 }
 type AuditBackendSplunk struct {
 	// Enabled allows to turn this backend on.
 	Enabled bool `json:"enabled"`
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file sytem buffer.
-	FilesystemBufferSize string `json:"bufferSize,omitempty"`
+	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 
 	// Index is the splunk index that should be used.
 	Index string `json:"index"`

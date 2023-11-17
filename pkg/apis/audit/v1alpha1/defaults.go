@@ -41,8 +41,8 @@ func defaultBackendClusterForwarding(backend *AuditBackendClusterForwarding) {
 		return
 	}
 
-	if pointer.IsZero(backend.FilesystemBufferSize) {
-		backend.FilesystemBufferSize = "900M"
+	if backend.FilesystemBufferSize == nil {
+		backend.FilesystemBufferSize = pointer.Pointer("900M")
 	}
 }
 
@@ -51,7 +51,7 @@ func defaultBackendSplunk(backend *AuditBackendSplunk) {
 		return
 	}
 
-	if pointer.IsZero(backend.FilesystemBufferSize) {
-		backend.FilesystemBufferSize = "900M"
+	if backend.FilesystemBufferSize == nil {
+		backend.FilesystemBufferSize = pointer.Pointer("900M")
 	}
 }
