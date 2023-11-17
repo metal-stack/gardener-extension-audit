@@ -34,12 +34,14 @@ type AuditConfig struct {
 	Persistence AuditPersistence `json:"persistence,omitempty"`
 
 	// Replicas are the amount of replicas used for the buffering audit pods.
+	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// WebhookMode allows to select which auditing mode - batching or blocking - should be used.
-	WebhookMode AuditWebhookMode `json:"webhookMode,omitempty"`
+	WebhookMode AuditWebhookMode `json:"webhookMode"`
 
 	// Backends contains the settings for the various backends.
+	// +optional
 	Backends *AuditBackends `json:"backends,omitempty"`
 }
 
@@ -56,13 +58,16 @@ type AuditPersistence struct {
 
 type AuditBackends struct {
 	// Log outputs the log data on stdout of the webhook pod. It is mainly intended for debugging / testing purposes.
+	// +optional
 	Log *AuditBackendLog `json:"log,omitempty"`
 
 	// ClusterForwarding will forward the audit data to a pod in the shoot where they are printed to stdout and can be
 	// picked up by the log collecting solution of the cluster operator's choice.
+	// +optional
 	ClusterForwarding *AuditBackendClusterForwarding `json:"clusterForwarding,omitempty"`
 
 	// Splunk will forward the audit data to a splunk HEC endpoint.
+	// +optional
 	Splunk *AuditBackendSplunk `json:"splunk,omitempty"`
 
 	// Possible backends that would be helpful as well:
