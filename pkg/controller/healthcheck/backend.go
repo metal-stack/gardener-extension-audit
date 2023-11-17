@@ -3,7 +3,6 @@ package healthcheck
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
@@ -65,10 +64,5 @@ func (h *BackendHealthChecker) check(ctx context.Context, namespace string) erro
 		return nil
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("unable to read http body: %w", err)
-	}
-
-	return fmt.Errorf("backend is unhealthy since errors or failued have occurred in the last minute time frame: %s", string(body))
+	return fmt.Errorf("backend is unhealthy since errors or failures have occurred in the last minute time frame")
 }
