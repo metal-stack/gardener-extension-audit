@@ -11,6 +11,7 @@ package config
 
 import (
 	apisconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	v1alpha1 "github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -18,6 +19,11 @@ import (
 func (in *ControllerConfiguration) DeepCopyInto(out *ControllerConfiguration) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
+	if in.DefaultBackends != nil {
+		in, out := &in.DefaultBackends, &out.DefaultBackends
+		*out = new(v1alpha1.AuditBackends)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.HealthCheckConfig != nil {
 		in, out := &in.HealthCheckConfig, &out.HealthCheckConfig
 		*out = new(apisconfig.HealthCheckConfig)

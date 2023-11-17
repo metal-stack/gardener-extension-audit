@@ -8,3 +8,8 @@ providerConfig:
     image:
       tag: latest
       pullPolicy: IfNotPresent
+
+    # config:
+    #   defaultBackends:
+    #     clusterForwarding:
+    #       enabled: true

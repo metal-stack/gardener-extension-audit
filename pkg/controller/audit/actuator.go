@@ -85,6 +85,8 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		}
 	}
 
+	auditConfig.Backends = a.applyDefaultBackends(log, auditConfig.Backends)
+
 	namespace := ex.GetNamespace()
 
 	cluster, err := controller.GetCluster(ctx, a.client, namespace)
@@ -115,6 +117,32 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 	}
 
 	return nil
+}
+
+func (a *actuator) applyDefaultBackends(log logr.Logger, backends *v1alpha1.AuditBackends) *v1alpha1.AuditBackends {
+	if backends == nil {
+		backends = &v1alpha1.AuditBackends{}
+	}
+	defaultedBackends := backends.DeepCopy()
+
+	if a.config.DefaultBackends == nil {
+		return defaultedBackends
+	}
+
+	if a.config.DefaultBackends.Log != nil && backends.Log == nil {
+		log.Info("configuring default backend for log")
+		defaultedBackends.Log = a.config.DefaultBackends.Log
+	}
+	if a.config.DefaultBackends.ClusterForwarding != nil && backends.ClusterForwarding == nil {
+		log.Info("configuring default backend for cluster forwarding")
+		defaultedBackends.ClusterForwarding = a.config.DefaultBackends.ClusterForwarding
+	}
+	if a.config.DefaultBackends.Splunk != nil && backends.Splunk == nil {
+		log.Info("configuring default backend for splunk")
+		defaultedBackends.Splunk = a.config.DefaultBackends.Splunk
+	}
+
+	return defaultedBackends
 }
 
 // Delete the Extension resource.

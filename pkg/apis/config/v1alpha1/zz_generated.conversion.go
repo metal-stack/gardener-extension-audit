@@ -14,6 +14,7 @@ import (
 
 	apisconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
+	auditv1alpha1 "github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 	config "github.com/metal-stack/gardener-extension-audit/pkg/apis/config"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +41,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(in *ControllerConfiguration, out *config.ControllerConfiguration, s conversion.Scope) error {
+	out.DefaultBackends = (*auditv1alpha1.AuditBackends)(unsafe.Pointer(in.DefaultBackends))
 	out.HealthCheckConfig = (*apisconfig.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
 	return nil
 }
@@ -50,6 +52,7 @@ func Convert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(
 }
 
 func autoConvert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(in *config.ControllerConfiguration, out *ControllerConfiguration, s conversion.Scope) error {
+	out.DefaultBackends = (*auditv1alpha1.AuditBackends)(unsafe.Pointer(in.DefaultBackends))
 	out.HealthCheckConfig = (*configv1alpha1.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
 	return nil
 }
