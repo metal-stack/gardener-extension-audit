@@ -10,6 +10,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -40,187 +41,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	defaultAuditPolicy = `
-apiVersion: audit.k8s.io/v1
-kind: Policy
-rules:
-  # The following requests were manually identified as high-volume and low-risk,
-  # so drop them.
-  - level: None
-    resources:
-      - group: ""
-        resources:
-          - endpoints
-          - services
-          - services/status
-    users:
-      - 'system:kube-proxy'
-    verbs:
-      - watch
-  - level: None
-    resources:
-      - group: ""
-        resources:
-          - nodes
-          - nodes/status
-    userGroups:
-      - 'system:nodes'
-    verbs:
-      - get
-  - level: None
-    namespaces:
-      - kube-system
-    resources:
-      - group: ""
-        resources:
-          - endpoints
-    users:
-      - 'system:kube-controller-manager'
-      - 'system:kube-scheduler'
-      - 'system:serviceaccount:kube-system:endpoint-controller'
-    verbs:
-      - get
-      - update
-  - level: None
-    resources:
-      - group: ""
-        resources:
-          - namespaces
-          - namespaces/status
-          - namespaces/finalize
-    users:
-      - 'system:apiserver'
-    verbs:
-      - get
-  # Don't log HPA fetching metrics.
-  - level: None
-    resources:
-      - group: metrics.k8s.io
-    users:
-      - 'system:kube-controller-manager'
-    verbs:
-      - get
-      - list
-  # Don't log these read-only URLs.
-  - level: None
-    nonResourceURLs:
-      - '/healthz*'
-      - /version
-      - '/swagger*'
-  # Don't log events requests.
-  - level: None
-    resources:
-      - group: ""
-        resources:
-          - events
-  # node and pod status calls from nodes are high-volume and can be large, don't log responses for expected updates from nodes
-  - level: Request
-    omitStages:
-      - RequestReceived
-    resources:
-      - group: ""
-        resources:
-          - nodes/status
-          - pods/status
-    users:
-      - kubelet
-      - 'system:node-problem-detector'
-      - 'system:serviceaccount:kube-system:node-problem-detector'
-    verbs:
-      - update
-      - patch
-  - level: Request
-    omitStages:
-      - RequestReceived
-    resources:
-      - group: ""
-        resources:
-          - nodes/status
-          - pods/status
-    userGroups:
-      - 'system:nodes'
-    verbs:
-      - update
-      - patch
-  # deletecollection calls can be large, don't log responses for expected namespace deletions
-  - level: Request
-    omitStages:
-      - RequestReceived
-    users:
-      - 'system:serviceaccount:kube-system:namespace-controller'
-    verbs:
-      - deletecollection
-  # Secrets, ConfigMaps, and TokenReviews can contain sensitive & binary data,
-  # so only log at the Metadata level.
-  - level: Metadata
-    omitStages:
-      - RequestReceived
-    resources:
-      - group: ""
-        resources:
-          - secrets
-          - configmaps
-      - group: authentication.k8s.io
-        resources:
-          - tokenreviews
-  # Get repsonses can be large; skip them.
-  - level: Request
-    omitStages:
-      - RequestReceived
-    resources:
-      - group: ""
-      - group: admissionregistration.k8s.io
-      - group: apiextensions.k8s.io
-      - group: apiregistration.k8s.io
-      - group: apps
-      - group: authentication.k8s.io
-      - group: authorization.k8s.io
-      - group: autoscaling
-      - group: batch
-      - group: certificates.k8s.io
-      - group: extensions
-      - group: metrics.k8s.io
-      - group: networking.k8s.io
-      - group: policy
-      - group: rbac.authorization.k8s.io
-      - group: scheduling.k8s.io
-      - group: settings.k8s.io
-      - group: storage.k8s.io
-    verbs:
-      - get
-      - list
-      - watch
-  # Default level for known APIs
-  - level: RequestResponse
-    omitStages:
-      - RequestReceived
-    resources:
-      - group: ""
-      - group: admissionregistration.k8s.io
-      - group: apiextensions.k8s.io
-      - group: apiregistration.k8s.io
-      - group: apps
-      - group: authentication.k8s.io
-      - group: authorization.k8s.io
-      - group: autoscaling
-      - group: batch
-      - group: certificates.k8s.io
-      - group: extensions
-      - group: metrics.k8s.io
-      - group: networking.k8s.io
-      - group: policy
-      - group: rbac.authorization.k8s.io
-      - group: scheduling.k8s.io
-      - group: settings.k8s.io
-      - group: storage.k8s.io
-  # Default level for all other requests.
-  - level: Metadata
-    omitStages:
-      - RequestReceived
-`
 )
 
 // NewActuator returns an actuator responsible for Extension resources.
@@ -257,10 +77,6 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		}
 	}
 
-	if auditConfig.AuditPolicy == nil {
-		auditConfig.AuditPolicy = pointer.Pointer(defaultAuditPolicy)
-	}
-
 	if auditConfig.Backends == nil {
 		auditConfig.Backends = &v1alpha1.AuditBackends{
 			Log: &v1alpha1.AuditBackendLog{
@@ -276,7 +92,25 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		return err
 	}
 
-	if err := a.createResources(ctx, log, auditConfig, cluster, namespace); err != nil {
+	splunkSecret := &corev1.Secret{}
+	if pointer.SafeDeref(auditConfig.Backends.Splunk).Enabled {
+		secretRef := helper.GetResourceByName(cluster.Shoot.Spec.Resources, auditConfig.Backends.Splunk.SecretResourceName)
+		if secretRef == nil {
+			return fmt.Errorf("splunk secret resource with name %q not found in shoot resources", auditConfig.Backends.Splunk.SecretResourceName)
+		}
+
+		err = controller.GetObjectByReference(ctx, a.client, &secretRef.ResourceRef, namespace, splunkSecret)
+		if err != nil {
+			return fmt.Errorf("unable to get referenced splunk secret: %w", err)
+		}
+
+		_, ok := splunkSecret.Data[v1alpha1.SplunkSecretTokenKey]
+		if !ok {
+			return fmt.Errorf("referenced splunk secret does not contain contents under key %q", v1alpha1.SplunkSecretTokenKey)
+		}
+	}
+
+	if err := a.createResources(ctx, log, auditConfig, cluster, splunkSecret, namespace); err != nil {
 		return err
 	}
 
@@ -298,7 +132,7 @@ func (a *actuator) Migrate(ctx context.Context, log logr.Logger, ex *extensionsv
 	return nil
 }
 
-func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster, namespace string) error {
+func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster, splunkSecret *corev1.Secret, namespace string) error {
 	const (
 		auditForwaderAccessSecretName = gutil.SecretNamePrefixShootAccess + "audit-cluster-forwarding-vpn-gateway"
 	)
@@ -313,12 +147,12 @@ func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditCo
 		return err
 	}
 
-	shootObjects, err := shootObjects(secrets)
+	shootObjects, err := shootObjects(auditConfig, secrets)
 	if err != nil {
 		return err
 	}
 
-	seedObjects, err := seedObjects(auditConfig, secrets, cluster, shootAccessSecret.Secret.Name, namespace)
+	seedObjects, err := seedObjects(auditConfig, secrets, cluster, splunkSecret, shootAccessSecret.Secret.Name, namespace)
 	if err != nil {
 		return err
 	}
@@ -420,7 +254,7 @@ func (a *actuator) generateSecrets(ctx context.Context, log logr.Logger, cluster
 	return secrets, nil
 }
 
-func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.Secret, cluster *extensions.Cluster, shootAccessSecretName, namespace string) ([]client.Object, error) {
+func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.Secret, cluster *extensions.Cluster, splunkSecretFromResources *corev1.Secret, shootAccessSecretName, namespace string) ([]client.Object, error) {
 	fluentBitImage, err := imagevector.ImageVector().FindImage("fluent-bit")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find fluent-bit image: %w", err)
@@ -460,16 +294,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						"*.backend.conf",
 					},
 				}.Generate(),
-			},
-		}
-
-		auditPolicyConfigMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "audit-policy",
-				Namespace: namespace,
-			},
-			Data: map[string]string{
-				"audit-policy.yaml": *auditConfig.AuditPolicy,
 			},
 		}
 
@@ -623,7 +447,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 	objects := []client.Object{
 		auditwebhookStatefulSet,
 		auditWebhookConfigSecret,
-		auditPolicyConfigMap,
 		fluentbitConfigMap,
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -860,7 +683,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			"splunk_token":             "${SPLUNK_HEC_TOKEN}",
 			"retry_limit":              "False",
 			"splunk_send_raw":          "Off",
-			"event_source":             "statefulset:audit-webhook-backend",
+			"event_source":             "statefulset:" + auditwebhookStatefulSet.Name,
 			"event_sourcetype":         "kube:apiserver:auditlog",
 			"event_index":              auditConfig.Backends.Splunk.Index,
 			"event_host":               cluster.ObjectMeta.Name,
@@ -869,9 +692,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		if auditConfig.Backends.Splunk.TlsEnabled {
 			splunkConfig["tls"] = "on"
 			splunkConfig["tls.verify"] = "on"
-		}
-		if auditConfig.Backends.Splunk.CaFile != "" {
-			splunkConfig["tls.ca_file "] = "/backends/splunk/certs/ca.crt"
 		}
 
 		fluentbitConfigMap.Data["splunk.backend.conf"] = fluentbitconfig.Config{
@@ -883,13 +703,28 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Name:      "audit-splunk-secret",
 				Namespace: namespace,
 			},
-			StringData: map[string]string{
-				"splunk_hec_token": auditConfig.Backends.Splunk.Token,
+			Data: map[string][]byte{
+				"splunk_hec_token": splunkSecretFromResources.Data[v1alpha1.SplunkSecretTokenKey],
 			},
 		}
 
-		if auditConfig.Backends.Splunk.TlsEnabled {
-			splunkSecret.StringData["ca.crt"] = auditConfig.Backends.Splunk.CaFile
+		auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].Env = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name: "SPLUNK_HEC_TOKEN",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: splunkSecret.ObjectMeta.Name,
+					},
+					Key: "splunk_hec_token",
+				},
+			},
+		})
+
+		caFile := splunkSecretFromResources.Data[v1alpha1.SplunkSecretCaFileKey]
+		if len(caFile) > 0 {
+			splunkConfig["tls.ca_file "] = "/backends/splunk/certs/ca.crt"
+
+			splunkSecret.Data["ca.crt"] = caFile
 
 			auditwebhookStatefulSet.Spec.Template.Spec.Volumes = append(auditwebhookStatefulSet.Spec.Template.Spec.Volumes, corev1.Volume{
 				Name: "splunk-secret",
@@ -909,21 +744,10 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Name:      "splunk-secret",
 				MountPath: "/backends/splunk/certs",
 			})
-			auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].Env = append(auditwebhookStatefulSet.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-				Name: "SPLUNK_HEC_TOKEN",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: splunkSecret.ObjectMeta.Name,
-						},
-						Key: "splunk_hec_token",
-					},
-				},
-			})
-
-			auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/splunk-secret"] = utils.ComputeSecretChecksum(splunkSecret.Data)
-
 		}
+
+		auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/splunk-secret"] = utils.ComputeSecretChecksum(splunkSecret.Data)
+
 		objects = append(objects, splunkSecret)
 	}
 
@@ -974,7 +798,11 @@ func webhookKubeconfig(namespace string) ([]byte, error) {
 	return kubeconfig, nil
 }
 
-func shootObjects(secrets map[string]*corev1.Secret) ([]client.Object, error) {
+func shootObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.Secret) ([]client.Object, error) {
+	if !pointer.SafeDeref(auditConfig.Backends.ClusterForwarding).Enabled {
+		return nil, nil
+	}
+
 	audittailerImage, err := imagevector.ImageVector().FindImage("audittailer")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find audittailer image: %w", err)

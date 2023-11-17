@@ -102,11 +102,6 @@ func (in *AuditConfig) DeepCopyInto(out *AuditConfig) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.AuditPolicy != nil {
-		in, out := &in.AuditPolicy, &out.AuditPolicy
-		*out = new(string)
-		**out = **in
-	}
 	if in.Backends != nil {
 		in, out := &in.Backends, &out.Backends
 		*out = new(AuditBackends)

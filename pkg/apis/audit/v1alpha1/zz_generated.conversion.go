@@ -136,8 +136,7 @@ func autoConvert_v1alpha1_AuditBackendSplunk_To_audit_AuditBackendSplunk(in *Aud
 	out.Index = in.Index
 	out.Host = in.Host
 	out.Port = in.Port
-	out.Token = in.Token
-	out.CaFile = in.CaFile
+	out.SecretResourceName = in.SecretResourceName
 	out.TlsEnabled = in.TlsEnabled
 	return nil
 }
@@ -153,8 +152,7 @@ func autoConvert_audit_AuditBackendSplunk_To_v1alpha1_AuditBackendSplunk(in *aud
 	out.Index = in.Index
 	out.Host = in.Host
 	out.Port = in.Port
-	out.Token = in.Token
-	out.CaFile = in.CaFile
+	out.SecretResourceName = in.SecretResourceName
 	out.TlsEnabled = in.TlsEnabled
 	return nil
 }
@@ -194,7 +192,6 @@ func autoConvert_v1alpha1_AuditConfig_To_audit_AuditConfig(in *AuditConfig, out 
 	}
 	out.Replicas = (*int32)(unsafe.Pointer(in.Replicas))
 	out.WebhookMode = audit.AuditWebhookMode(in.WebhookMode)
-	out.AuditPolicy = (*string)(unsafe.Pointer(in.AuditPolicy))
 	out.Backends = (*audit.AuditBackends)(unsafe.Pointer(in.Backends))
 	return nil
 }
@@ -210,7 +207,6 @@ func autoConvert_audit_AuditConfig_To_v1alpha1_AuditConfig(in *audit.AuditConfig
 	}
 	out.Replicas = (*int32)(unsafe.Pointer(in.Replicas))
 	out.WebhookMode = AuditWebhookMode(in.WebhookMode)
-	out.AuditPolicy = (*string)(unsafe.Pointer(in.AuditPolicy))
 	out.Backends = (*AuditBackends)(unsafe.Pointer(in.Backends))
 	return nil
 }

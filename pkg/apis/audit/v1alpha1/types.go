@@ -14,6 +14,9 @@ const (
 	AuditWebhookModeBatch          AuditWebhookMode = "batch"
 	AuditWebhookModeBlocking       AuditWebhookMode = "blocking"
 	AuditWebhookModeBlockingStrict AuditWebhookMode = "blocking-strict"
+
+	SplunkSecretTokenKey  = "token"
+	SplunkSecretCaFileKey = "ca"
 )
 
 type (
@@ -35,10 +38,6 @@ type AuditConfig struct {
 
 	// WebhookMode allows to select which auditing mode - batching or blocking - should be used.
 	WebhookMode AuditWebhookMode `json:"webhookMode,omitempty"`
-
-	// AuditPolicy contains the audit policy to be used for the cluster, as unencoded string.
-	// If none is supplied, a default auditpolicy is used.
-	AuditPolicy *string `json:"auditPolicy,omitempty"`
 
 	// Backends contains the settings for the various backends.
 	Backends *AuditBackends `json:"backends,omitempty"`
@@ -102,11 +101,13 @@ type AuditBackendSplunk struct {
 	// Port ist the port on which the HEC endpoint is listening.
 	Port string `json:"port"`
 
-	// Token is the splunk HEC token necessary to send log data to this Host/Index.
-	Token string `json:"hecToken"`
-
-	// CaFile contains, in an unencoded string, the CA (bundle) of the CA that signed the HEC endpoint's server certificate.
-	CaFile string `json:"caFile"`
+	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the splunk backend.
+	//
+	// The referenced secret may contain the following keys:
+	//
+	// - token: Required, hec token to authenticate against this host/index
+	// - ca: Optional, the CA (bundle) that signed the HEC endpoint's server certificate as an unencoded string.
+	SecretResourceName string `json:"secretResourceName"`
 
 	// TlsEnabled determines whether TLS should be used to communicate to the HEC endpoint.
 	TlsEnabled bool `json:"tls"`
