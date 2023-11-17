@@ -38,14 +38,9 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	defaultPersistenceSize      = "1Gi"
-	defaultForwardingBufferSize = "900M"
-	defaultSplunkBufferSize     = "900M"
 )
 
 // NewActuator returns an actuator responsible for Extension resources.
@@ -80,14 +75,6 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		if _, _, err := a.decoder.Decode(ex.Spec.ProviderConfig.Raw, nil, auditConfig); err != nil {
 			return fmt.Errorf("failed to decode provider config: %w", err)
 		}
-	}
-
-	if auditConfig.Persistence == nil {
-		auditConfig.Persistence = &v1alpha1.AuditPersistence{}
-	}
-
-	if auditConfig.Persistence.Size == nil {
-		auditConfig.Persistence.Size = pointer.Pointer(defaultPersistenceSize)
 	}
 
 	if auditConfig.Backends == nil {
@@ -278,11 +265,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		return nil, fmt.Errorf("unable to generate webhook kubeconfig: %w", err)
 	}
 
-	size, err := resource.ParseQuantity(pointer.SafeDeref(auditConfig.Persistence.Size))
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse persistence size as kubernetes quantity: %w", err)
-	}
-
 	var (
 		fluentbitConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -298,6 +280,9 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						"storage.checksum":          "off",
 						"storage.max_chunks_up":     "128",
 						"storage.backlog.mem_limit": "5M",
+						"http_server":               "on",
+						"http_listen":               "0.0.0.0",
+						"http_port":                 "2020",
 					},
 					Input: []fluentbitconfig.Input{
 						map[string]string{
@@ -330,7 +315,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Labels:      map[string]string{},
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Replicas:    pointer.Pointer(int32(2)),
+				Replicas:    getReplicas(cluster, auditConfig.Replicas),
 				ServiceName: "audit-webhook-backend",
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -349,6 +334,9 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						},
 						Annotations: map[string]string{
 							"scheduler.alpha.kubernetes.io/critical-pod": "",
+							"prometheus.io/scrape":                       "true",
+							"prometheus.io/port":                         "2020",
+							"prometheus.io/path":                         "/api/v1/metrics/prometheus",
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -360,6 +348,37 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 									"--storage_path=/data",
 									"--config=/config/fluent-bit.conf",
 								},
+								Ports: []corev1.ContainerPort{
+									{
+										ContainerPort: 2020,
+									},
+								},
+								ReadinessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path: "/api/v1/metrics/prometheus",
+											Port: intstr.FromInt(2020),
+										},
+									},
+								},
+								LivenessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path: "/",
+											Port: intstr.FromInt(2020),
+										},
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("200m"),
+										corev1.ResourceMemory: resource.MustParse("512Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1"),
+										corev1.ResourceMemory: resource.MustParse("1Gi"), // should never be reached because max_chunks_up and chunk_size is smaller than 1Gi
+									},
+								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      "config",
@@ -368,6 +387,23 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 									{
 										Name:      "audit-data",
 										MountPath: "/data",
+									},
+								},
+							},
+						},
+						Affinity: &corev1.Affinity{
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+									{
+										Weight: 100,
+										PodAffinityTerm: corev1.PodAffinityTerm{
+											LabelSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"app": "audit-webhook-backend",
+												},
+											},
+											TopologyKey: "kubernetes.io/hostname",
+										},
 									},
 								},
 							},
@@ -398,7 +434,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 							StorageClassName: auditConfig.Persistence.StorageClassName,
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceStorage: size,
+									corev1.ResourceStorage: *auditConfig.Persistence.Size,
 								},
 							},
 						},
@@ -430,6 +466,19 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				},
 			},
 		},
+		&policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-webhook-backend",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "audit-webhook-backend",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MinAvailable: utils.IntStrPtrFromInt(1),
+				Selector:     auditwebhookStatefulSet.Spec.Selector,
+			},
+		},
 	}
 
 	if pointer.SafeDeref(auditConfig.Backends.Log).Enabled {
@@ -453,7 +502,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		forwardingConfig := map[string]string{
 			"match":                    "audit",
 			"name":                     "forward",
-			"storage.total_limit_size": defaultForwardingBufferSize,
+			"storage.total_limit_size": pointer.SafeDeref(auditConfig.Backends.ClusterForwarding.FilesystemBufferSize),
 			"host":                     "audit-cluster-forwarding-vpn-gateway",
 			"port":                     "9876",
 			"require_ack_response":     "True",
@@ -465,10 +514,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			"tls.crt_file":             "/backends/cluster-forwarding/certs/tls.crt",
 			"tls.key_file":             "/backends/cluster-forwarding/certs/tls.key",
 			"tls.vhost":                "audittailer",
-		}
-
-		if auditConfig.Backends.ClusterForwarding.FilesystemBufferSize != "" {
-			forwardingConfig["storage.total_limit_size"] = auditConfig.Backends.ClusterForwarding.FilesystemBufferSize
 		}
 
 		fluentbitConfigMap.Data["clusterforwarding.backend.conf"] = fluentbitconfig.Config{
@@ -502,7 +547,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				Namespace: namespace,
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Pointer(int32(1)),
+				Replicas: getReplicas(cluster, pointer.Pointer(int32(1))),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app": "audit-cluster-forwarding-vpn-gateway",
@@ -632,7 +677,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		splunkConfig := map[string]string{
 			"match":                    "audit",
 			"name":                     "splunk",
-			"storage.total_limit_size": defaultSplunkBufferSize,
+			"storage.total_limit_size": pointer.SafeDeref(auditConfig.Backends.Splunk.FilesystemBufferSize),
 			"host":                     auditConfig.Backends.Splunk.Host,
 			"port":                     auditConfig.Backends.Splunk.Port,
 			"splunk_token":             "${SPLUNK_HEC_TOKEN}",
@@ -642,10 +687,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			"event_sourcetype":         "kube:apiserver:auditlog",
 			"event_index":              auditConfig.Backends.Splunk.Index,
 			"event_host":               cluster.ObjectMeta.Name,
-		}
-
-		if auditConfig.Backends.Splunk.FilesystemBufferSize != "" {
-			splunkConfig["storage.total_limit_size"] = auditConfig.Backends.Splunk.FilesystemBufferSize
 		}
 
 		if auditConfig.Backends.Splunk.TlsEnabled {
@@ -991,4 +1032,12 @@ func shootObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.
 			},
 		},
 	}, nil
+}
+
+func getReplicas(cluster *extensions.Cluster, wokenUp *int32) *int32 {
+	if controller.IsHibernated(cluster) {
+		return pointer.Pointer(int32(0))
+	}
+
+	return wokenUp
 }
