@@ -9,10 +9,10 @@ providerConfig:
       tag: latest
       pullPolicy: IfNotPresent
 
-    config:
-      defaultBackends:
-        clusterForwarding:
-          enabled: true
+    # config:
+    #   defaultBackends:
+    #     clusterForwarding:
+    #       enabled: true
 
         # splunk:
         #   enabled: true
