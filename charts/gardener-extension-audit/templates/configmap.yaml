@@ -28,7 +28,7 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "name" $ }}-default-backend-secret-{{ $secret.name }}
+  name: default-backend-secret-{{ $secret.name }}
   namespace: {{ $.Release.Namespace }}
   labels:
 {{ include "labels" $ | indent 4 }}

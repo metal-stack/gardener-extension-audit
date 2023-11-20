@@ -78,9 +78,9 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		}
 	}
 
-	backends, secrets, err := a.applyDefaultBackends(ctx, log, auditConfig.Backends)
+	backends, defaultBackendSecrets, err := a.applyDefaultBackends(ctx, log, auditConfig.Backends)
 	if err != nil {
-		log.Error(err, "unable to apply default backends configured by operator, continuiung anyway but configuration of this extension needs to be checked")
+		log.Error(err, "unable to apply default backends configured by operator, continuing anyway but configuration of this extension needs to be checked")
 	} else {
 		auditConfig.Backends = backends
 	}
@@ -94,7 +94,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 
 	splunkSecret := &corev1.Secret{}
 	if pointer.SafeDeref(auditConfig.Backends.Splunk).Enabled {
-		splunkSecret, err = a.findBackendSecret(ctx, cluster, secrets, auditConfig.Backends.Splunk.SecretResourceName)
+		splunkSecret, err = a.findBackendSecret(ctx, cluster, defaultBackendSecrets, auditConfig.Backends.Splunk.SecretResourceName)
 		if err != nil {
 			return err
 		}
@@ -115,8 +115,8 @@ func (a *actuator) applyDefaultBackends(ctx context.Context, log logr.Logger, ba
 		addSecret = func(secretName string) error {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      secretName,
-					Namespace: os.Getenv("MY_NAMESPACE"),
+					Name:      os.Getenv("BACKEND_SECRET_PREFIX") + secretName,
+					Namespace: os.Getenv("BACKEND_SECRET_NAMESPACE"),
 				},
 			}
 
@@ -158,6 +158,8 @@ func (a *actuator) applyDefaultBackends(ctx context.Context, log logr.Logger, ba
 			return defaultedBackends, secrets, err
 		}
 	}
+
+	v1alpha1.DefaultBackends(defaultedBackends)
 
 	return defaultedBackends, secrets, nil
 }
@@ -1096,7 +1098,7 @@ func shootObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.
 	}, nil
 }
 
-func (a *actuator) findBackendSecret(ctx context.Context, cluster *extensions.Cluster, secretsFromDefaultBackends map[string]*corev1.Secret, secretName string) (*corev1.Secret, error) {
+func (a *actuator) findBackendSecret(ctx context.Context, cluster *extensions.Cluster, defaultBackendSecrets map[string]*corev1.Secret, secretName string) (*corev1.Secret, error) {
 	fromShootResources := func() (*corev1.Secret, error) {
 		secretRef := helper.GetResourceByName(cluster.Shoot.Spec.Resources, secretName)
 		if secretRef == nil {
@@ -1119,9 +1121,9 @@ func (a *actuator) findBackendSecret(ctx context.Context, cluster *extensions.Cl
 
 	if secret == nil {
 		// if the secret is not referenced in the shoot resources it may be defined in the default backend secrets
-		if len(secretsFromDefaultBackends) > 0 {
+		if len(defaultBackendSecrets) > 0 {
 			var ok bool
-			secret, ok = secretsFromDefaultBackends[secretName]
+			secret, ok = defaultBackendSecrets[secretName]
 			if !ok {
 				return nil, fmt.Errorf("secret resource with name %q not found in default backend secrets", secretName)
 			}

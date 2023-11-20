@@ -13,3 +13,18 @@ providerConfig:
     #   defaultBackends:
     #     clusterForwarding:
     #       enabled: true
+
+    config:
+      defaultBackends:
+        splunk:
+          enabled: true
+          index: <splunk index>
+          host: splunk-endpoint.example.com
+          port: "443"
+          secretResourceName: splunk
+          tls: true
+
+      defaultBackendSecrets:
+        - name: splunk
+          data:
+            token: test
