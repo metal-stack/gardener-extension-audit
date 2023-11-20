@@ -22,3 +22,18 @@ data:
     defaultBackends:
 {{- toYaml .Values.config.defaultBackends | nindent 6 }}
 {{- end }}
+
+{{- range $secret := .Values.config.defaultBackendSecrets }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "name" $ }}-default-backend-secret-{{ $secret.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+{{ include "labels" $ | indent 4 }}
+data:
+{{- range $key, $value := $secret.data }}
+  {{ $key }}: {{ $value | b64enc }}
+{{- end }}
+{{- end }}
