@@ -9,22 +9,20 @@ providerConfig:
       tag: latest
       pullPolicy: IfNotPresent
 
-    # config:
-    #   defaultBackends:
-    #     clusterForwarding:
-    #       enabled: true
-
     config:
       defaultBackends:
-        splunk:
+        clusterForwarding:
           enabled: true
-          index: <splunk index>
-          host: splunk-endpoint.example.com
-          port: "443"
-          secretResourceName: splunk
-          tls: true
 
-      defaultBackendSecrets:
-        - name: splunk
-          data:
-            token: test
+        # splunk:
+        #   enabled: true
+        #   index: <splunk index>
+        #   host: splunk-endpoint.example.com
+        #   port: "443"
+        #   secretResourceName: splunk
+        #   tls: true
+
+      # defaultBackendSecrets:
+      #   - name: splunk
+      #     data:
+      #       token: test

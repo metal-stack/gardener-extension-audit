@@ -44,9 +44,9 @@ config:
   defaultBackends:
 
   defaultBackendSecrets:
-    - name: my-secret
-      data:
-        my-key: my-value
+    # - name: my-secret
+    #   data:
+    #     my-key: my-value
 
 gardener:
   version: ""
