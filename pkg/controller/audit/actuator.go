@@ -98,6 +98,11 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		if err != nil {
 			return err
 		}
+
+		_, ok := splunkSecret.Data[v1alpha1.SplunkSecretTokenKey]
+		if !ok {
+			return fmt.Errorf("referenced splunk secret does not contain contents under key %q", v1alpha1.SplunkSecretTokenKey)
+		}
 	}
 
 	if err := a.createResources(ctx, log, auditConfig, cluster, splunkSecret, namespace); err != nil {
@@ -1130,11 +1135,6 @@ func (a *actuator) findBackendSecret(ctx context.Context, cluster *extensions.Cl
 		} else {
 			return nil, fmt.Errorf("secret resource with name %q not found in shoot resources", secretName)
 		}
-	}
-
-	_, ok := secret.Data[v1alpha1.SplunkSecretTokenKey]
-	if !ok {
-		return nil, fmt.Errorf("referenced secret does not contain contents under key %q", v1alpha1.SplunkSecretTokenKey)
 	}
 
 	return secret, nil
