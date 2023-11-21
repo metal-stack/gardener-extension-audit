@@ -24,10 +24,10 @@ func SetDefaults_AuditConfig(a *AuditConfig) {
 		a.Replicas = pointer.Pointer(int32(2))
 	}
 
-	defaultBackends(a.Backends)
+	DefaultBackends(a.Backends)
 }
 
-func defaultBackends(backends *AuditBackends) {
+func DefaultBackends(backends *AuditBackends) {
 	if backends == nil {
 		return
 	}
