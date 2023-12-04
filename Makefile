@@ -74,7 +74,7 @@ generate: $(HELM)
 	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/generate.sh ./charts/... ./cmd/... ./pkg/...
 
 .PHONY: generate-in-docker
-generate-in-docker: revendor $(HELM)
+generate-in-docker: revendor $(HELM) $(YQ)
 	# comment back in after first release:
 	# echo $(shell git describe --abbrev=0 --tags) > VERSION
 	docker run --rm -i$(DOCKER_TTY_ARG) -v $(PWD):/go/src/github.com/metal-stack/gardener-extension-audit golang:$(GO_VERSION) \
