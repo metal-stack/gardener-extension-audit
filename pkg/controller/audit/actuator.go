@@ -353,6 +353,16 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						"*.backend.conf",
 					},
 				}.Generate(),
+				"null.backend.conf": fluentbitconfig.Config{
+					// the null backend is for the case when no backends are configured and fluentbit will still start up
+					// as when this happens, it will fail because the backend conf include does not match any file
+					Output: []fluentbitconfig.Output{
+						map[string]string{
+							"match": "audit",
+							"name":  "null",
+						},
+					},
+				}.Generate(),
 			},
 		}
 

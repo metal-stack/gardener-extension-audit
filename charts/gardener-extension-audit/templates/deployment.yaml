@@ -21,6 +21,8 @@ spec:
       labels:
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-private-networks: allowed
         networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
         networking.resources.gardener.cloud/to-all-shoots-audit-webhook-backend-tcp-2020: allowed
 {{ include "labels" . | indent 8 }}
