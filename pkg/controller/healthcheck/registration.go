@@ -46,7 +46,7 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 			},
 			{
 				ConditionType: string(gardencorev1beta1.ShootSystemComponentsHealthy),
-				HealthCheck:   backendHealth(),
+				HealthCheck:   backendHealth(opts.HealthCheckConfig.SyncPeriod.Duration),
 			},
 		},
 		sets.Set[gardencorev1beta1.ConditionType]{},

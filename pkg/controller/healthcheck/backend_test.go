@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -90,6 +91,7 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 	h := &BackendHealthChecker{
 		httpClient: newFakeClient(http.StatusOK, body1),
 		retries:    map[string]map[string]int{},
+		backoff:    map[string]time.Time{},
 	}
 
 	err := h.checkRetries(context.Background(), "shoot-a")

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -20,14 +21,18 @@ type BackendHealthChecker struct {
 	logger     logr.Logger
 	httpClient *http.Client
 	// counting retries by namespace by output plugin
-	retries map[string]map[string]int
-	mutex   sync.Mutex
+	retries    map[string]map[string]int
+	mutex      sync.Mutex
+	backoff    map[string]time.Time
+	syncPeriod time.Duration
 }
 
-func backendHealth() healthcheck.HealthCheck {
+func backendHealth(syncPeriod time.Duration) healthcheck.HealthCheck {
 	return &BackendHealthChecker{
 		httpClient: http.DefaultClient,
 		retries:    map[string]map[string]int{},
+		backoff:    map[string]time.Time{},
+		syncPeriod: syncPeriod,
 	}
 }
 
@@ -94,6 +99,21 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 	// as retries are set to no_limits, fluent-bit does not count unreachable backends as errors or retry_errors
 	// therefore, we need to check if there were any retries during the last health check
 
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	defer func() {
+		h.backoff[namespace] = time.Now()
+	}()
+
+	lastCheck, ok := h.backoff[namespace]
+	if ok {
+		if time.Since(lastCheck) < h.syncPeriod-1*time.Second {
+			// we only need a check once every sync period, otherwise retries might be too low such that health flickers
+			return nil
+		}
+	}
+
 	type metrics struct {
 		Output map[string]struct {
 			Retries        int `json:"retries"`
@@ -129,9 +149,6 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal metrics: %w", err)
 	}
-
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
 
 	plugins, ok := h.retries[namespace]
 	if !ok {
