@@ -17,12 +17,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+var (
+	mutex sync.Mutex
+)
+
 type BackendHealthChecker struct {
 	logger     logr.Logger
 	httpClient *http.Client
 	// counting retries by namespace by output plugin
 	retries    map[string]map[string]int
-	mutex      sync.Mutex
 	backoff    map[string]time.Time
 	syncPeriod time.Duration
 }
@@ -41,14 +44,8 @@ func (h *BackendHealthChecker) SetLoggerSuffix(provider, extension string) {
 }
 
 func (h *BackendHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	return &BackendHealthChecker{
-		logger:     h.logger,
-		httpClient: h.httpClient,
-		retries:    h.retries,
-		mutex:      sync.Mutex{},
-		backoff:    h.backoff,
-		syncPeriod: h.syncPeriod,
-	}
+	copy := *h
+	return &copy
 }
 
 func (h *BackendHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
@@ -102,8 +99,8 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 	// as retries are set to no_limits, fluent-bit does not count unreachable backends as errors or retry_errors
 	// therefore, we need to check if there were any retries during the last health check
 
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	defer func() {
 		h.backoff[namespace] = time.Now()
@@ -174,7 +171,7 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 		plugins[name] = output.Retries
 
 		if diff > 0 {
-			errs = append(errs, fmt.Errorf("%d retries have occurred in the last minute time frame for output %q", diff, name))
+			errs = append(errs, fmt.Errorf("%d retries (%d in total) have occurred in the last minute time frame for output %q", diff, output.Retries, name))
 		}
 	}
 

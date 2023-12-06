@@ -117,7 +117,7 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 	h.httpClient = newFakeClient(http.StatusOK, body2)
 
 	err = h.checkRetries(context.Background(), "shoot-a")
-	require.ErrorContains(t, err, `4 retries have occurred in the last minute time frame for output "splunk.0"`)
+	require.ErrorContains(t, err, `4 retries (9230 in total) have occurred in the last minute time frame for output "splunk.0"`)
 
 	require.Equal(t, map[string]map[string]int{
 		"shoot-a": {
