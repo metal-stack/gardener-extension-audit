@@ -11,6 +11,7 @@ import (
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 	"github.com/metal-stack/gardener-extension-audit/pkg/controller/audit"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -48,7 +49,7 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 				HealthCheck:   backendHealth(),
 			},
 		},
-		nil,
+		sets.Set[gardencorev1beta1.ConditionType]{},
 	)
 }
 
