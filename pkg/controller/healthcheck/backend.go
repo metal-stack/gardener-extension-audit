@@ -45,6 +45,9 @@ func (h *BackendHealthChecker) DeepCopy() healthcheck.HealthCheck {
 		logger:     h.logger,
 		httpClient: h.httpClient,
 		retries:    h.retries,
+		mutex:      sync.Mutex{},
+		backoff:    h.backoff,
+		syncPeriod: h.syncPeriod,
 	}
 }
 
