@@ -338,6 +338,11 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						"storage.max_chunks_up":     "128",
 						"storage.backlog.mem_limit": "5M",
 
+						"retry_limit": "no_limits", // let fluent-bit never discard any data
+
+						"scheduler.base": "1",
+						"scheduler.cap":  "60", // try to send records every 60s
+
 						"health_check":           "on",
 						"hc_errors_count":        "0",
 						"hc_retry_failure_count": "0",
@@ -760,8 +765,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			"host":                     auditConfig.Backends.Splunk.Host,
 			"port":                     auditConfig.Backends.Splunk.Port,
 			"splunk_token":             "${SPLUNK_HEC_TOKEN}",
-			"retry_limit":              "False",
-			"splunk_send_raw":          "Off",
+			"splunk_send_raw":          "off",
 			"event_source":             "statefulset:" + auditwebhookStatefulSet.Name,
 			"event_sourcetype":         "kube:apiserver:auditlog",
 			"event_index":              auditConfig.Backends.Splunk.Index,
