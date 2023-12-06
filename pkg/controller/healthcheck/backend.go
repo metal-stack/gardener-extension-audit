@@ -3,9 +3,11 @@ package healthcheck
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -17,13 +19,15 @@ import (
 type BackendHealthChecker struct {
 	logger     logr.Logger
 	httpClient *http.Client
-	retries    map[string]int
+	// counting retries by namespace by output plugin
+	retries map[string]map[string]int
+	mutex   sync.Mutex
 }
 
 func backendHealth() healthcheck.HealthCheck {
 	return &BackendHealthChecker{
 		httpClient: http.DefaultClient,
-		retries:    map[string]int{},
+		retries:    map[string]map[string]int{},
 	}
 }
 
@@ -32,8 +36,11 @@ func (h *BackendHealthChecker) SetLoggerSuffix(provider, extension string) {
 }
 
 func (h *BackendHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	copy := *h
-	return &copy
+	return &BackendHealthChecker{
+		logger:     h.logger,
+		httpClient: h.httpClient,
+		retries:    h.retries,
+	}
 }
 
 func (h *BackendHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
@@ -123,24 +130,35 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 		return fmt.Errorf("unable to unmarshal metrics: %w", err)
 	}
 
-	sum := 0
-	for _, output := range m.Output {
-		sum += output.Retries
-	}
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 
-	lastCount, ok := h.retries[namespace]
+	plugins, ok := h.retries[namespace]
 	if !ok {
-		h.retries[namespace] = sum
-		return nil
+		plugins = map[string]int{}
 	}
 
-	diff := sum - lastCount
+	var errs []error
 
-	h.retries[namespace] = sum
+	for name, output := range m.Output {
+		output := output
 
-	if diff > 0 {
-		return fmt.Errorf("backend is unhealthy since retries have occurred in the last minute time frame")
+		lastCount, ok := plugins[name]
+		if !ok {
+			plugins[name] = output.Retries
+			continue
+		}
+
+		diff := output.Retries - lastCount
+
+		plugins[name] = output.Retries
+
+		if diff > 0 {
+			errs = append(errs, fmt.Errorf("%d retries have occurred in the last minute time frame for output %q", diff, name))
+		}
 	}
 
-	return nil
+	h.retries[namespace] = plugins
+
+	return errors.Join(errs...)
 }
