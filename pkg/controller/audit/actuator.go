@@ -338,8 +338,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 						"storage.max_chunks_up":     "128",
 						"storage.backlog.mem_limit": "5M",
 
-						"retry_limit": "no_limits", // let fluent-bit never discard any data
-
 						"scheduler.base": "1",
 						"scheduler.cap":  "60", // try to send records every 60s
 
@@ -571,6 +569,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				map[string]string{
 					"match":                    "audit",
 					"name":                     "stdout",
+					"retry_limit":              "no_limits", // let fluent-bit never discard any data
 					"storage.total_limit_size": "10M",
 				},
 			},
@@ -586,6 +585,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		forwardingConfig := map[string]string{
 			"match":                    "audit",
 			"name":                     "forward",
+			"retry_limit":              "no_limits", // let fluent-bit never discard any data
 			"storage.total_limit_size": pointer.SafeDeref(auditConfig.Backends.ClusterForwarding.FilesystemBufferSize),
 			"host":                     "audit-cluster-forwarding-vpn-gateway",
 			"port":                     "9876",
@@ -761,6 +761,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		splunkConfig := map[string]string{
 			"match":                    "audit",
 			"name":                     "splunk",
+			"retry_limit":              "no_limits", // let fluent-bit never discard any data
 			"storage.total_limit_size": pointer.SafeDeref(auditConfig.Backends.Splunk.FilesystemBufferSize),
 			"host":                     auditConfig.Backends.Splunk.Host,
 			"port":                     auditConfig.Backends.Splunk.Port,
