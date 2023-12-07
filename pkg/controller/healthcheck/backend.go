@@ -194,35 +194,35 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 		plugins = map[string]int{}
 	}
 
-	var errs []error
+	var (
+		errs []error
+		sums = map[string]int{}
+	)
 
 	for _, m := range ms {
 		m := m
-
-		sums := map[string]int{}
 
 		for name, output := range m.Output {
 			output := output
 
 			sums[name] += output.Retries
 		}
+	}
 
-		for name, sum := range sums {
-			lastCount, ok := plugins[name]
-			if !ok {
-				plugins[name] = sum
-				continue
-			}
-
-			diff := sum - lastCount
-
+	for name, sum := range sums {
+		lastCount, ok := plugins[name]
+		if !ok {
 			plugins[name] = sum
-
-			if diff > 0 {
-				errs = append(errs, fmt.Errorf("%d retries (%d in total) have occurred in the last minute time frame for output %q", diff, sum, name))
-			}
+			continue
 		}
 
+		diff := sum - lastCount
+
+		plugins[name] = sum
+
+		if diff > 0 {
+			errs = append(errs, fmt.Errorf("%d retries (%d in total) have occurred in the last minute time frame for output %q", diff, sum, name))
+		}
 	}
 
 	h.retries[namespace] = plugins

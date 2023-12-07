@@ -16,72 +16,25 @@ import (
 
 var (
 	body1 = `{
-		"input": {
-		  "http.0": {
-			"records": 3586,
-			"bytes": 2007828608
-		  },
-		  "storage_backlog.1": {
-			"records": 0,
-			"bytes": 0
-		  }
-		},
-		"filter": {},
 		"output": {
 		  "splunk.0": {
-			"proc_records": 0,
-			"proc_bytes": 0,
-			"errors": 0,
-			"retries": 9226,
-			"retries_failed": 0,
-			"dropped_records": 0,
-			"retried_records": 13026
+			"retries": 10
 		  },
 		  "null.1": {
-			"proc_records": 182,
-			"proc_bytes": 91946175,
-			"errors": 0,
-			"retries": 0,
-			"retries_failed": 0,
-			"dropped_records": 0,
-			"retried_records": 0
+			"retries": 0
 		  }
 		}
 	  } `
-
 	body2 = `{
-		"input": {
-		  "http.0": {
-			"records": 3586,
-			"bytes": 2007828608
-		  },
-		  "storage_backlog.1": {
-			"records": 0,
-			"bytes": 0
-		  }
-		},
-		"filter": {},
 		"output": {
 		  "splunk.0": {
-			"proc_records": 0,
-			"proc_bytes": 0,
-			"errors": 0,
-			"retries": 9230,
-			"retries_failed": 0,
-			"dropped_records": 0,
-			"retried_records": 13026
+			"retries": 20
 		  },
 		  "null.1": {
-			"proc_records": 182,
-			"proc_bytes": 91946175,
-			"errors": 0,
-			"retries": 0,
-			"retries_failed": 0,
-			"dropped_records": 0,
-			"retried_records": 0
+			"retries": 0
 		  }
 		}
-	  }`
+	  } `
 )
 
 type RoundTripFunc func(req *http.Request) *http.Response
@@ -108,6 +61,9 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 						{
 							Addresses: []string{"1.2.3.4"},
 						},
+						{
+							Addresses: []string{"1.2.3.5"},
+						},
 					},
 				},
 			},
@@ -119,7 +75,7 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 
 	require.Equal(t, map[string]map[string]int{
 		"shoot-a": {
-			"splunk.0": 9226,
+			"splunk.0": 2 * 10, // two backends with 10 retries
 			"null.1":   0,
 		},
 	}, h.retries)
@@ -129,7 +85,7 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 
 	require.Equal(t, map[string]map[string]int{
 		"shoot-a": {
-			"splunk.0": 9226,
+			"splunk.0": 2 * 10, // no changes in retries
 			"null.1":   0,
 		},
 	}, h.retries)
@@ -137,11 +93,11 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 	h.httpClient = newFakeClient(http.StatusOK, body2)
 
 	err = h.checkRetries(context.Background(), "shoot-a")
-	require.ErrorContains(t, err, `4 retries (9230 in total) have occurred in the last minute time frame for output "splunk.0"`)
+	require.ErrorContains(t, err, `20 retries (40 in total) have occurred in the last minute time frame for output "splunk.0"`)
 
 	require.Equal(t, map[string]map[string]int{
 		"shoot-a": {
-			"splunk.0": 9230,
+			"splunk.0": 2 * 20,
 			"null.1":   0,
 		},
 	}, h.retries)
