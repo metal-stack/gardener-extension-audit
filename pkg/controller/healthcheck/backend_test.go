@@ -46,7 +46,7 @@ func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 func TestBackendHealthChecker_checkRetries(t *testing.T) {
 	h := &BackendHealthChecker{
 		httpClient: newFakeClient(http.StatusOK, body1),
-		retries:    map[string]map[string]int{},
+		retries:    retryMap{},
 		backoff:    map[string]time.Time{},
 		seedClient: fake.NewClientBuilder().WithLists(&discoveryv1.EndpointSliceList{
 			Items: []discoveryv1.EndpointSlice{
@@ -73,7 +73,7 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 	err := h.checkRetries(context.Background(), "shoot-a")
 	require.NoError(t, err)
 
-	require.Equal(t, map[string]map[string]int{
+	require.Equal(t, retryMap{
 		"shoot-a": {
 			"splunk.0": 2 * 10, // two backends with 10 retries
 			"null.1":   0,
@@ -83,7 +83,7 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 	err = h.checkRetries(context.Background(), "shoot-a")
 	require.NoError(t, err)
 
-	require.Equal(t, map[string]map[string]int{
+	require.Equal(t, retryMap{
 		"shoot-a": {
 			"splunk.0": 2 * 10, // no changes in retries
 			"null.1":   0,
@@ -95,7 +95,7 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 	err = h.checkRetries(context.Background(), "shoot-a")
 	require.ErrorContains(t, err, `20 retries (40 in total) have occurred in the last minute time frame for output "splunk.0"`)
 
-	require.Equal(t, map[string]map[string]int{
+	require.Equal(t, retryMap{
 		"shoot-a": {
 			"splunk.0": 2 * 20,
 			"null.1":   0,

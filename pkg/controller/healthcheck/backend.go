@@ -19,11 +19,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// retryMap contains outputRetries using the namespace as a key
+type retryMap map[string]outputRetries
+
+// outputRetries contains retries per output plugin
+type outputRetries map[string]int
+
 type BackendHealthChecker struct {
 	logger     logr.Logger
 	httpClient *http.Client
-	// counting retries by namespace by output plugin
-	retries    map[string]map[string]int
+	retries    retryMap
 	mutex      sync.Mutex
 	backoff    map[string]time.Time
 	syncPeriod time.Duration
@@ -33,7 +38,7 @@ type BackendHealthChecker struct {
 func backendHealth(syncPeriod time.Duration) healthcheck.HealthCheck {
 	return &BackendHealthChecker{
 		httpClient: http.DefaultClient,
-		retries:    map[string]map[string]int{},
+		retries:    retryMap{},
 		backoff:    map[string]time.Time{},
 		syncPeriod: syncPeriod,
 	}
@@ -191,12 +196,12 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 
 	plugins, ok := h.retries[namespace]
 	if !ok {
-		plugins = map[string]int{}
+		plugins = outputRetries{}
 	}
 
 	var (
 		errs []error
-		sums = map[string]int{}
+		sums = outputRetries{}
 	)
 
 	for _, m := range ms {
