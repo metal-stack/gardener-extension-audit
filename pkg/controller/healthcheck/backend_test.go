@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var (
@@ -92,6 +95,23 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 		httpClient: newFakeClient(http.StatusOK, body1),
 		retries:    map[string]map[string]int{},
 		backoff:    map[string]time.Time{},
+		seedClient: fake.NewClientBuilder().WithLists(&discoveryv1.EndpointSliceList{
+			Items: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "shoot-a",
+						Labels: map[string]string{
+							"kubernetes.io/service-name": "audit-webhook-backend",
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"1.2.3.4"},
+						},
+					},
+				},
+			},
+		}).Build(),
 	}
 
 	err := h.checkRetries(context.Background(), "shoot-a")

@@ -12,6 +12,8 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,6 +27,7 @@ type BackendHealthChecker struct {
 	mutex      sync.Mutex
 	backoff    map[string]time.Time
 	syncPeriod time.Duration
+	seedClient client.Client
 }
 
 func backendHealth(syncPeriod time.Duration) healthcheck.HealthCheck {
@@ -34,6 +37,11 @@ func backendHealth(syncPeriod time.Duration) healthcheck.HealthCheck {
 		backoff:    map[string]time.Time{},
 		syncPeriod: syncPeriod,
 	}
+}
+
+// InjectSeedClient injects the seed client
+func (h *BackendHealthChecker) InjectSeedClient(seedClient client.Client) {
+	h.seedClient = seedClient
 }
 
 func (h *BackendHealthChecker) SetLoggerSuffix(provider, extension string) {
@@ -48,6 +56,7 @@ func (h *BackendHealthChecker) DeepCopy() healthcheck.HealthCheck {
 		mutex:      sync.Mutex{},
 		backoff:    h.backoff,
 		syncPeriod: h.syncPeriod,
+		seedClient: h.seedClient,
 	}
 }
 
@@ -102,6 +111,18 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 	// as retries are set to no_limits, fluent-bit does not count unreachable backends as errors or retry_errors
 	// therefore, we need to check if there were any retries during the last health check
 
+	endpointSliceList := &discoveryv1.EndpointSliceList{}
+	err := h.seedClient.List(ctx, endpointSliceList, client.MatchingLabels{
+		"kubernetes.io/service-name": "audit-webhook-backend",
+	}, client.InNamespace(namespace))
+	if err != nil {
+		return err
+	}
+
+	if len(endpointSliceList.Items) == 0 {
+		return fmt.Errorf("no endpoints found for audit backend service")
+	}
+
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
@@ -124,33 +145,48 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 		} `json:"output"`
 	}
 
-	url := fmt.Sprintf("http://audit-webhook-backend.%s.svc.cluster.local:2020/api/v1/metrics", namespace)
+	var (
+		ms        []metrics
+		addresses []string
+	)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("unable to create http request: %w", err)
+	for _, endpoints := range endpointSliceList.Items {
+		for _, endpoint := range endpoints.Endpoints {
+			addresses = append(addresses, endpoint.Addresses...)
+		}
 	}
 
-	resp, err := h.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("unable to do http request: %w", err)
-	}
-	defer resp.Body.Close()
+	for _, address := range addresses {
+		url := fmt.Sprintf("http://%s:2020/api/v1/metrics", address)
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("metrics endpoint return code was %d", resp.StatusCode)
-	}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return fmt.Errorf("unable to create http request: %w", err)
+		}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("unable to read http body: %w", err)
-	}
+		resp, err := h.httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("unable to do http request: %w", err)
+		}
+		defer resp.Body.Close()
 
-	var m metrics
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("metrics endpoint return code was %d", resp.StatusCode)
+		}
 
-	err = json.Unmarshal(body, &m)
-	if err != nil {
-		return fmt.Errorf("unable to unmarshal metrics: %w", err)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("unable to read http body: %w", err)
+		}
+
+		var m metrics
+
+		err = json.Unmarshal(body, &m)
+		if err != nil {
+			return fmt.Errorf("unable to unmarshal metrics: %w", err)
+		}
+
+		ms = append(ms, m)
 	}
 
 	plugins, ok := h.retries[namespace]
@@ -160,22 +196,33 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 
 	var errs []error
 
-	for name, output := range m.Output {
-		output := output
+	for _, m := range ms {
+		m := m
 
-		lastCount, ok := plugins[name]
-		if !ok {
-			plugins[name] = output.Retries
-			continue
+		sums := map[string]int{}
+
+		for name, output := range m.Output {
+			output := output
+
+			sums[name] += output.Retries
 		}
 
-		diff := output.Retries - lastCount
+		for name, sum := range sums {
+			lastCount, ok := plugins[name]
+			if !ok {
+				plugins[name] = sum
+				continue
+			}
 
-		plugins[name] = output.Retries
+			diff := sum - lastCount
 
-		if diff > 0 {
-			errs = append(errs, fmt.Errorf("%d retries (%d in total) have occurred in the last minute time frame for output %q", diff, output.Retries, name))
+			plugins[name] = sum
+
+			if diff > 0 {
+				errs = append(errs, fmt.Errorf("%d retries (%d in total) have occurred in the last minute time frame for output %q", diff, sum, name))
+			}
 		}
+
 	}
 
 	h.retries[namespace] = plugins
