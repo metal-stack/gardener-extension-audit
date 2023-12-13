@@ -1015,6 +1015,7 @@ func shootObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.
 								},
 								SecurityContext: &corev1.SecurityContext{
 									RunAsUser:                pointer.Pointer(int64(65534)),
+									RunAsNonRoot:             pointer.Pointer(true),
 									AllowPrivilegeEscalation: pointer.Pointer(false),
 									SeccompProfile: &corev1.SeccompProfile{
 										Type: corev1.SeccompProfileTypeRuntimeDefault,
