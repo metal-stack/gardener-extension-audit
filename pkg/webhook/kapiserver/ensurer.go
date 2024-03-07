@@ -14,6 +14,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,9 +24,11 @@ import (
 )
 
 // NewEnsurer creates a new controlplane ensurer.
-func NewEnsurer(logger logr.Logger) genericmutator.Ensurer {
+func NewEnsurer(logger logr.Logger, mgr manager.Manager) genericmutator.Ensurer {
 	return &ensurer{
-		logger: logger.WithName("audit-controlplane-ensurer"),
+		client:  mgr.GetClient(),
+		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+		logger:  logger.WithName("audit-controlplane-ensurer"),
 	}
 }
 
@@ -34,18 +37,6 @@ type ensurer struct {
 	client  client.Client
 	decoder runtime.Decoder
 	logger  logr.Logger
-}
-
-// InjectClient injects the given client into the ensurer.
-func (e *ensurer) InjectClient(client client.Client) error {
-	e.client = client
-	return nil
-}
-
-// InjectScheme injects the given scheme into the reconciler.
-func (e *ensurer) InjectScheme(scheme *runtime.Scheme) error {
-	e.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
-	return nil
 }
 
 // EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.

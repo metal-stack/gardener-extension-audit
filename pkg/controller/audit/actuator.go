@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	configlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -45,9 +46,11 @@ import (
 )
 
 // NewActuator returns an actuator responsible for Extension resources.
-func NewActuator(config config.ControllerConfiguration) extension.Actuator {
+func NewActuator(mgr manager.Manager, config config.ControllerConfiguration) extension.Actuator {
 	return &actuator{
-		config: config,
+		client:  mgr.GetClient(),
+		decoder: serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+		config:  config,
 	}
 }
 
@@ -55,18 +58,6 @@ type actuator struct {
 	client  client.Client
 	decoder runtime.Decoder
 	config  config.ControllerConfiguration
-}
-
-// InjectClient injects the controller runtime client into the reconciler.
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
-}
-
-// InjectScheme injects the given scheme into the reconciler.
-func (a *actuator) InjectScheme(scheme *runtime.Scheme) error {
-	a.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
-	return nil
 }
 
 // Reconcile the Extension resource.
