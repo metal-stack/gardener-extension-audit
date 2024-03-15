@@ -43,6 +43,10 @@ type AuditConfig struct {
 	// Backends contains the settings for the various backends.
 	// +optional
 	Backends *AuditBackends `json:"backends,omitempty"`
+
+	// Hosts contains names and addresses for backend destinations that can not be resolved by DNS (eg on private networks).
+	// +optional
+	Hosts []AuditHost `json:"hosts,omitempty"`
 }
 
 type AuditPersistence struct {
@@ -116,4 +120,12 @@ type AuditBackendSplunk struct {
 
 	// TlsEnabled determines whether TLS should be used to communicate to the HEC endpoint.
 	TlsEnabled bool `json:"tls"`
+}
+
+type AuditHost struct {
+	// IP is the IP address that the hostnames should be resolved to
+	IP string `json:"ip"`
+
+	// HostNames are the names that should be resolved to the IP
+	HostNames []string `json:"hostnames"`
 }

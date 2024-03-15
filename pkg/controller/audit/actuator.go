@@ -391,6 +391,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 							"app": "audit-webhook-backend",
 							"networking.gardener.cloud/from-prometheus":                                            "allowed",
 							"networking.gardener.cloud/to-dns":                                                     "allowed",
+							"networking.gardener.cloud/to-private-networks":                                        "allowed",
 							"networking.gardener.cloud/to-public-networks":                                         "allowed",
 							"networking.gardener.cloud/from-shoot-apiserver":                                       "allowed",
 							"networking.resources.gardener.cloud/to-audit-cluster-forwarding-vpn-gateway-tcp-9876": "allowed",
@@ -824,6 +825,25 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/splunk-secret"] = utils.ComputeSecretChecksum(splunkSecret.Data)
 
 		objects = append(objects, splunkSecret)
+	}
+
+	if auditConfig.Hosts != nil {
+		aliases := []corev1.HostAlias{}
+		for _, hostentry := range auditConfig.Hosts {
+			if hostentry.IP == "" {
+				continue
+			}
+			if hostentry.HostNames == nil {
+				continue
+			}
+			aliases = append(aliases, corev1.HostAlias{
+				IP:        hostentry.IP,
+				Hostnames: hostentry.HostNames,
+			})
+		}
+		if aliases != nil {
+			auditwebhookStatefulSet.Spec.Template.Spec.HostAliases = aliases
+		}
 	}
 
 	auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/secret-"+auditWebhookConfigSecret.Name] = utils.ComputeSecretChecksum(auditWebhookConfigSecret.Data)
