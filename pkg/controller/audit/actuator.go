@@ -830,25 +830,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		}.Generate()
 	}
 
-	if auditConfig.Hosts != nil {
-		aliases := []corev1.HostAlias{}
-		for _, hostentry := range auditConfig.Hosts {
-			if hostentry.IP == "" {
-				continue
-			}
-			if hostentry.HostNames == nil {
-				continue
-			}
-			aliases = append(aliases, corev1.HostAlias{
-				IP:        hostentry.IP,
-				Hostnames: hostentry.HostNames,
-			})
-		}
-		if aliases != nil {
-			auditwebhookStatefulSet.Spec.Template.Spec.HostAliases = aliases
-		}
-	}
-
 	auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/secret-"+auditWebhookConfigSecret.Name] = utils.ComputeSecretChecksum(auditWebhookConfigSecret.Data)
 	auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/config-"+fluentbitConfigMap.Name] = utils.ComputeConfigMapChecksum(fluentbitConfigMap.Data)
 

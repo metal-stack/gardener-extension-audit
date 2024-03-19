@@ -33,10 +33,6 @@ type AuditConfig struct {
 
 	// Backends contains the settings for the various backends.
 	Backends *AuditBackends
-
-	// Hosts contains names and addresses for backend destinations that can not be resolved by DNS (eg on private networks).
-	// +optional
-	Hosts []AuditHost
 }
 
 type AuditPersistence struct {
@@ -102,12 +98,4 @@ type AuditBackendSplunk struct {
 
 	// TlsHost is the hostname that fluent-bit should request through SNI when connecting to a site that serves different hostnames under one IP.
 	TlsHost string
-}
-
-type AuditHost struct {
-	// IP is the IP address that the hostnames should be resolved to
-	IP string
-
-	// HostNames are the names that should be resolved to the IP
-	HostNames []string
 }
