@@ -83,7 +83,7 @@ type AuditBackendSplunk struct {
 	// Index is the splunk index that should be used.
 	Index string
 
-	// Host ist the hostname of the splunk HEC endpoint.
+	// Host is the hostname or IP of the splunk HEC endpoint.
 	Host string
 
 	// Port ist the port on which the HEC endpoint is listening.
@@ -99,6 +99,9 @@ type AuditBackendSplunk struct {
 
 	// TlsEnabled determines whether TLS should be used to communicate to the HEC endpoint.
 	TlsEnabled bool
+
+	// TlsHost is the hostname that fluent-bit should request through SNI when connecting to a site that serves different hostnames under one IP.
+	TlsHost string
 }
 
 type AuditHost struct {

@@ -768,11 +768,10 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		if auditConfig.Backends.Splunk.TlsEnabled {
 			splunkConfig["tls"] = "on"
 			splunkConfig["tls.verify"] = "on"
+			if auditConfig.Backends.Splunk.TlsHost != "" {
+				splunkConfig["tls.vhost"] = auditConfig.Backends.Splunk.TlsHost
+			}
 		}
-
-		fluentbitConfigMap.Data["splunk.backend.conf"] = fluentbitconfig.Config{
-			Output: []fluentbitconfig.Output{splunkConfig},
-		}.Generate()
 
 		splunkSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -798,7 +797,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 
 		caFile := splunkSecretFromResources.Data[v1alpha1.SplunkSecretCaFileKey]
 		if len(caFile) > 0 {
-			splunkConfig["tls.ca_file "] = "/backends/splunk/certs/ca.crt"
+			splunkConfig["tls.ca_file"] = "/backends/splunk/certs/ca.crt"
 
 			splunkSecret.Data["ca.crt"] = caFile
 
@@ -825,6 +824,10 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 		auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/splunk-secret"] = utils.ComputeSecretChecksum(splunkSecret.Data)
 
 		objects = append(objects, splunkSecret)
+
+		fluentbitConfigMap.Data["splunk.backend.conf"] = fluentbitconfig.Config{
+			Output: []fluentbitconfig.Output{splunkConfig},
+		}.Generate()
 	}
 
 	if auditConfig.Hosts != nil {
