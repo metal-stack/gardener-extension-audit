@@ -2,7 +2,7 @@
 
 Provides a Gardener extension for managing kube-apiserver audit logs for a shoot cluster.
 
-The extension spins up a fluentbit-based audit sink in the seed's shoot namespace prior to starting the shoot's API server. Therefore, it is required to run this extension with the reconcile lifecycle policy `BeforeKubeAPIServer`. Also the deletion has to happen `BeforeKubeAPIServer` as otherwise the managed resources of this extension block the shoot deletion flow.
+The extension spins up a fluentbit-based audit sink in the seed's shoot namespace prior to starting the shoot's API server. Therefore, it is required to run this extension with the reconcile lifecycle policy `BeforeKubeAPIServer`.
 
 This sink has the ability to buffer audit logs to a persistent volume and send them to the supported backends.
 
