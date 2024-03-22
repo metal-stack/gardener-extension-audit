@@ -10,6 +10,6 @@ spec:
     type: audit
     globallyEnabled: true
     lifecycle:
+      delete: BeforeKubeAPIServer
+      migrate: BeforeKubeAPIServer
       reconcile: BeforeKubeAPIServer
-      migrate: AfterKubeAPIServer
-      delete: AfterKubeAPIServer
