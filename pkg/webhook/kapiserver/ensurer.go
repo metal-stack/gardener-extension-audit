@@ -46,6 +46,11 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 		return err
 	}
 
+	if cluster.Shoot.DeletionTimestamp != nil && !cluster.Shoot.DeletionTimestamp.IsZero() {
+		e.logger.Info("skip mutating api server because shoot is in deletion")
+		return nil
+	}
+
 	namespace := cluster.ObjectMeta.Name
 
 	ex := &extensionsv1alpha1.Extension{
