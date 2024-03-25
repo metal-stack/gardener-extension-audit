@@ -138,6 +138,7 @@ func autoConvert_v1alpha1_AuditBackendSplunk_To_audit_AuditBackendSplunk(in *Aud
 	out.Port = in.Port
 	out.SecretResourceName = in.SecretResourceName
 	out.TlsEnabled = in.TlsEnabled
+	out.TlsHost = in.TlsHost
 	return nil
 }
 
@@ -154,6 +155,7 @@ func autoConvert_audit_AuditBackendSplunk_To_v1alpha1_AuditBackendSplunk(in *aud
 	out.Port = in.Port
 	out.SecretResourceName = in.SecretResourceName
 	out.TlsEnabled = in.TlsEnabled
+	out.TlsHost = in.TlsHost
 	return nil
 }
 
