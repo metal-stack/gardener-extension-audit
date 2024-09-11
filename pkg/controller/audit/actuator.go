@@ -247,6 +247,13 @@ func (a *actuator) deleteResources(ctx context.Context, log logr.Logger, namespa
 		return err
 	}
 
+	// TODO: since k8s v1.27 there is a new feature to delete the pvc automatically when the statefulSet is deleted
+	// https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention
+	err := a.client.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.MatchingLabels{"app": "audit-webhook-backend"}, client.InNamespace(namespace))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
