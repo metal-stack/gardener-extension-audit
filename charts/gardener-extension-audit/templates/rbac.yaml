@@ -52,6 +52,12 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - persistentvolumeclaims
+  verbs:
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
   - secrets
   - configmaps
   verbs:
