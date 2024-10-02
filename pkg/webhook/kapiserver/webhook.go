@@ -45,13 +45,13 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	}
 
 	webhook := &extensionswebhook.Webhook{
-		Name:     "kapiserver",
-		Provider: "",
-		Types:    types,
-		Target:   extensionswebhook.TargetSeed,
-		Path:     "kapiserver",
-		Webhook:  &admission.Webhook{Handler: handler},
-		Selector: namespaceSelector,
+		Name:              "kapiserver",
+		Provider:          "",
+		Types:             types,
+		Target:            extensionswebhook.TargetSeed,
+		Path:              "kapiserver",
+		Webhook:           &admission.Webhook{Handler: handler},
+		NamespaceSelector: namespaceSelector,
 	}
 
 	return webhook, err

@@ -165,6 +165,10 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 	return a.deleteResources(ctx, log, ex.GetNamespace())
 }
 
+func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.Extension) error {
+	return nil
+}
+
 // Restore the Extension resource.
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	return a.Reconcile(ctx, log, ex)
@@ -504,7 +508,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 								corev1.ReadWriteOnce,
 							},
 							StorageClassName: auditConfig.Persistence.StorageClassName,
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceStorage: *auditConfig.Persistence.Size,
 								},
@@ -556,7 +560,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: utils.IntStrPtrFromInt(1),
+				MinAvailable: utils.IntStrPtrFromInt32(1),
 				Selector:     auditwebhookStatefulSet.Spec.Selector,
 			},
 		},

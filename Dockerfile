@@ -5,7 +5,7 @@ COPY . .
 RUN make install \
  && strip /go/bin/gardener-extension-audit
 
-FROM alpine:3.19
+FROM alpine:3.20
 WORKDIR /
 COPY charts /charts
 COPY --from=builder /go/bin/gardener-extension-audit /gardener-extension-audit
