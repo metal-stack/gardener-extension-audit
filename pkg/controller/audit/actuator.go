@@ -687,6 +687,21 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			},
 		}
 
+		if cluster.Shoot.Spec.ControlPlane != nil && cluster.Shoot.Spec.ControlPlane.HighAvailability != nil {
+			vpnGateway.Spec.Template.Labels["networking.resources.gardener.cloud/to-vpn-seed-server-0-tcp-9443"] = "allowed"
+
+			vpnGateway.Spec.Template.Spec.Containers[0].Env = append(vpnGateway.Spec.Template.Spec.Containers[0].Env,
+				corev1.EnvVar{
+					Name:  "GATEWAY_PROXY_HOST",
+					Value: "vpn-seed-server-0",
+				},
+				corev1.EnvVar{
+					Name:  "GATEWAY_PROXY_CLIENT_SECRET",
+					Value: "vpn-seed-client",
+				},
+			)
+		}
+
 		if err := gutil.InjectGenericKubeconfig(vpnGateway, extensions.GenericTokenKubeconfigSecretNameFromCluster(cluster), shootAccessSecretName); err != nil {
 			return nil, err
 		}
