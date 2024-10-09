@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -561,7 +560,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(intstr.FromInt32(1)),
+				MinAvailable: pointer.Pointer(intstr.FromInt32(1)),
 				Selector:     auditwebhookStatefulSet.Spec.Selector,
 			},
 		},
