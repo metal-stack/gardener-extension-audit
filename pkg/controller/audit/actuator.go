@@ -784,6 +784,15 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 			}
 		}
 
+		splunkConfigFilter := make(map[string]string, len(auditConfig.Backends.Splunk.CustomData)+2)
+		if len(auditConfig.Backends.Splunk.CustomData) > 0 {
+			splunkConfigFilter["name"] = "modify"
+			splunkConfigFilter["match"] = "*"
+			for key, value := range auditConfig.Backends.Splunk.CustomData {
+				splunkConfigFilter["add "+key] = value
+			}
+		}
+
 		splunkSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "audit-splunk-secret",
@@ -836,9 +845,13 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 
 		objects = append(objects, splunkSecret)
 
-		fluentbitConfigMap.Data["splunk.backend.conf"] = fluentbitconfig.Config{
+		fluentbitBackendSplunk := fluentbitconfig.Config{
 			Output: []fluentbitconfig.Output{splunkConfig},
-		}.Generate()
+		}
+		if len(splunkConfigFilter) > 0 {
+			fluentbitBackendSplunk.Filter = []fluentbitconfig.Filter{splunkConfigFilter}
+		}
+		fluentbitConfigMap.Data["splunk.backend.conf"] = fluentbitBackendSplunk.Generate()
 	}
 
 	auditwebhookStatefulSet.Spec.Template.ObjectMeta.Annotations["checksum/secret-"+auditWebhookConfigSecret.Name] = utils.ComputeSecretChecksum(auditWebhookConfigSecret.Data)

@@ -24,6 +24,13 @@ func TestConfig_Generate(t *testing.T) {
 						"name": "http",
 					},
 				},
+				Filter: []Filter{
+					{
+						"name":  "modify",
+						"match": "*",
+						"add":   "cluster devcluster",
+					},
+				},
 				Output: []Output{
 					map[string]string{
 						"name":  "    stdout  ",
@@ -43,6 +50,11 @@ func TestConfig_Generate(t *testing.T) {
 
 [INPUT]
     name http
+
+[FILTER]
+    add cluster devcluster
+    match *
+    name modify
 
 [OUTPUT]
     match *
