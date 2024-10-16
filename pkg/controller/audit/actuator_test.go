@@ -1,14 +1,16 @@
 package audit
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 )
 
 func TestSeedObjects_SplunkConfig_MultipleEventFields(t *testing.T) {
@@ -39,27 +41,18 @@ func TestSeedObjects_SplunkConfig_MultipleEventFields(t *testing.T) {
 		},
 	}
 	objects, err := seedObjects(auditConfig, secrets, cluster, splunkSecretFromResources, shootAccessSecretName, namespace)
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
+	require.NoError(t, err)
+
 	// inspect output
-	if len(objects) < 3 {
-		t.Error("returend objects slice is to small")
-		t.FailNow()
-	}
+	require.Greaterf(t, len(objects), 3, "returend objects slice is to small")
+
 	fluentbitConfigMap, ok := objects[2].(*corev1.ConfigMap)
-	if !ok {
-		t.Errorf("fluentbitConfigMap is of the wrong type %T", objects[0])
-		t.FailNow()
-	}
+	require.Truef(t, ok, "fluentbitConfigMap is of the wrong type %T", objects[0])
+
 	fluentbitConfig := fluentbitConfigMap.Data["splunk.backend.conf"]
-	if fluentbitConfig == "" {
-		t.Error("fluentbitConfig is empty")
-		t.FailNow()
-	}
-	if !(strings.Contains(fluentbitConfig, "[FILTER]") && strings.Contains(fluentbitConfig, "add key1 value1") && strings.Contains(fluentbitConfig, "add key2 value2")) {
-		t.Errorf("fluentbitConfig does not contain the expected custom data entries:\n%v", fluentbitConfig)
-		t.FailNow()
-	}
+	require.NotEmpty(t, fluentbitConfig, "fluentbitConfig is empty")
+
+	assert.Contains(t, fluentbitConfig, "[FILTER]")
+	assert.Contains(t, fluentbitConfig, "add key1 value1")
+	assert.Contains(t, fluentbitConfig, "add key2 value2")
 }
