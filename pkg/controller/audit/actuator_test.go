@@ -13,46 +13,76 @@ import (
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 )
 
-func TestSeedObjects_SplunkConfig_MultipleEventFields(t *testing.T) {
-	// setup empty inputs
-	var (
-		auditConfig *v1alpha1.AuditConfig = &v1alpha1.AuditConfig{
-			Backends: &v1alpha1.AuditBackends{
-				Log: &v1alpha1.AuditBackendLog{},
+func TestSeedObjects_SplunkConfigCustomData(t *testing.T) {
+	tt := []struct {
+		desc       string
+		customData map[string]string
+		assertion  func(*testing.T, string)
+	}{
+		{
+			desc: "multiple custom data",
+			customData: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
 			},
-			Persistence: v1alpha1.AuditPersistence{
-				Size: &resource.Quantity{},
+			assertion: func(t *testing.T, c string) {
+				assert.Contains(t, c, "[FILTER]")
+				assert.Contains(t, c, "add key1 value1")
+				assert.Contains(t, c, "add key2 value2")
 			},
-		}
-		secrets map[string]*corev1.Secret = map[string]*corev1.Secret{}
-		cluster *extensions.Cluster       = &extensions.Cluster{
-			Shoot: &v1beta1.Shoot{},
-		}
-		splunkSecretFromResources *corev1.Secret = &corev1.Secret{}
-		shootAccessSecretName     string
-		namespace                 string
-	)
-	// prepare test inputs
-	auditConfig.Backends.Splunk = &v1alpha1.AuditBackendSplunk{
-		Enabled: true,
-		CustomData: map[string]string{
-			"key1": "value1",
-			"key2": "value2",
+		},
+		{
+			desc:       "empty custom data",
+			customData: map[string]string{},
+			assertion: func(t *testing.T, c string) {
+				assert.NotContains(t, c, "[FILTER]")
+			},
+		},
+		{
+			desc:       "nil custom data",
+			customData: map[string]string{},
+			assertion: func(t *testing.T, c string) {
+				assert.NotContains(t, c, "[FILTER]")
+			},
 		},
 	}
-	objects, err := seedObjects(auditConfig, secrets, cluster, splunkSecretFromResources, shootAccessSecretName, namespace)
-	require.NoError(t, err)
+	for _, tc := range tt {
+		t.Run(tc.desc, func(t *testing.T) {
+			// setup empty inputs
+			var (
+				auditConfig *v1alpha1.AuditConfig = &v1alpha1.AuditConfig{
+					Backends: &v1alpha1.AuditBackends{
+						Log: &v1alpha1.AuditBackendLog{},
+					},
+					Persistence: v1alpha1.AuditPersistence{
+						Size: &resource.Quantity{},
+					},
+				}
+				secrets map[string]*corev1.Secret = map[string]*corev1.Secret{}
+				cluster *extensions.Cluster       = &extensions.Cluster{
+					Shoot: &v1beta1.Shoot{},
+				}
+				splunkSecretFromResources *corev1.Secret = &corev1.Secret{}
+				shootAccessSecretName     string
+				namespace                 string
+			)
+			// prepare test inputs
+			auditConfig.Backends.Splunk = &v1alpha1.AuditBackendSplunk{
+				Enabled:    true,
+				CustomData: tc.customData,
+			}
+			objects, err := seedObjects(auditConfig, secrets, cluster, splunkSecretFromResources, shootAccessSecretName, namespace)
+			require.NoError(t, err)
 
-	// inspect output
-	require.Greaterf(t, len(objects), 3, "returend objects slice is to small")
+			// inspect output
+			require.Greaterf(t, len(objects), 3, "returend objects slice is to small")
 
-	fluentbitConfigMap, ok := objects[2].(*corev1.ConfigMap)
-	require.Truef(t, ok, "fluentbitConfigMap is of the wrong type %T", objects[0])
+			fluentbitConfigMap, ok := objects[2].(*corev1.ConfigMap)
+			require.Truef(t, ok, "fluentbitConfigMap is of the wrong type %T", objects[0])
 
-	fluentbitConfig := fluentbitConfigMap.Data["splunk.backend.conf"]
-	require.NotEmpty(t, fluentbitConfig, "fluentbitConfig is empty")
+			fluentbitConfig := fluentbitConfigMap.Data["splunk.backend.conf"]
 
-	assert.Contains(t, fluentbitConfig, "[FILTER]")
-	assert.Contains(t, fluentbitConfig, "add key1 value1")
-	assert.Contains(t, fluentbitConfig, "add key2 value2")
+			tc.assertion(t, fluentbitConfig)
+		})
+	}
 }
