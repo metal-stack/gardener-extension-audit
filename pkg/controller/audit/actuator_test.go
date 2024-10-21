@@ -86,3 +86,91 @@ func TestSeedObjects_SplunkConfigCustomData(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateSplunkCustomData(t *testing.T) {
+	tt := []struct {
+		desc   string
+		values map[string]string
+		valid  bool
+	}{
+		{
+			desc:   "nil customData",
+			values: nil,
+			valid:  true,
+		},
+		{
+			desc:   "empty customData",
+			values: map[string]string{},
+			valid:  true,
+		},
+		{
+			desc: "single valid key/value pair",
+			values: map[string]string{
+				"key1.KEY_1": "value1.VALUE_1",
+			},
+			valid: true,
+		},
+		{
+			desc: "invalid key",
+			values: map[string]string{
+				"key1!": "value1",
+			},
+			valid: false,
+		},
+		{
+			desc: "invalid value",
+			values: map[string]string{
+				"key1": "value1!",
+			},
+			valid: false,
+		},
+		{
+			desc: "empty key",
+			values: map[string]string{
+				"": "value",
+			},
+			valid: false,
+		},
+		{
+			desc: "empty value",
+			values: map[string]string{
+				"value": "",
+			},
+			valid: false,
+		},
+		{
+			desc: "multiple valid key/value pairs",
+			values: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			},
+			valid: true,
+		},
+		{
+			desc: "multiple key/value pairs with one invalid pair",
+			values: map[string]string{
+				"key1":  "value1",
+				"key2":  "value2",
+				"key2!": "value2",
+			},
+			valid: false,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.desc, func(t *testing.T) {
+			auditConfig := &v1alpha1.AuditConfig{
+				Backends: &v1alpha1.AuditBackends{
+					Splunk: &v1alpha1.AuditBackendSplunk{
+						CustomData: tc.values,
+					},
+				},
+			}
+			actual := validateSplunkCustomData(auditConfig)
+			if tc.valid {
+				assert.NoError(t, actual)
+			} else {
+				assert.Error(t, actual)
+			}
+		})
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
@@ -22,10 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/go-logr/logr"
-	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
-	"github.com/metal-stack/gardener-extension-audit/pkg/apis/config"
-	"github.com/metal-stack/gardener-extension-audit/pkg/fluentbitconfig"
-	"github.com/metal-stack/gardener-extension-audit/pkg/imagevector"
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +31,11 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
+	"github.com/metal-stack/gardener-extension-audit/pkg/apis/config"
+	"github.com/metal-stack/gardener-extension-audit/pkg/fluentbitconfig"
+	"github.com/metal-stack/gardener-extension-audit/pkg/imagevector"
 
 	configlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -67,6 +69,11 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		if _, _, err := a.decoder.Decode(ex.Spec.ProviderConfig.Raw, nil, auditConfig); err != nil {
 			return fmt.Errorf("failed to decode provider config: %w", err)
 		}
+	}
+
+	err := validateSplunkCustomData(auditConfig)
+	if err != nil {
+		return fmt.Errorf("failed to validate audit config: customData for splunk may only contain letters, numbers, and _ or . %w", err)
 	}
 
 	backends, defaultBackendSecrets, err := a.applyDefaultBackends(ctx, log, auditConfig.Backends)
@@ -1181,4 +1188,34 @@ func getReplicas(cluster *extensions.Cluster, wokenUp *int32) *int32 {
 	}
 
 	return wokenUp
+}
+
+// validateSplunkCustomData makes sure that all key/value pairs contain only letters,
+// numbers, '_' or '.'. Empty keys or values are also not allowed.
+func validateSplunkCustomData(auditConfig *v1alpha1.AuditConfig) error {
+	backends := auditConfig.Backends
+	if backends == nil {
+		return nil
+	}
+	splunk := backends.Splunk
+	if splunk == nil {
+		return nil
+	}
+	customData := splunk.CustomData
+	for key, value := range customData {
+		if !isValidSplunkCustomDataString(key) {
+			return fmt.Errorf("%q is not a valid customData key for splunk", key)
+		}
+		if !isValidSplunkCustomDataString(value) {
+			return fmt.Errorf("%q is not a valid customData value for splunk", value)
+		}
+	}
+
+	return nil
+}
+
+var validSplunkCustomDataExpression = regexp.MustCompile("^[a-zA-Z0-9._]+$")
+
+func isValidSplunkCustomDataString(s string) bool {
+	return validSplunkCustomDataExpression.MatchString(s)
 }
