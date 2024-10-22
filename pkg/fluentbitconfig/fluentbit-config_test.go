@@ -3,7 +3,7 @@ package fluentbitconfig
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConfig_Generate(t *testing.T) {
@@ -22,6 +22,13 @@ func TestConfig_Generate(t *testing.T) {
 				Input: []Input{
 					map[string]string{
 						"name": "http",
+					},
+				},
+				Filter: []Filter{
+					{
+						"name":  "modify",
+						"match": "*",
+						"add":   "cluster devcluster",
 					},
 				},
 				Output: []Output{
@@ -43,6 +50,11 @@ func TestConfig_Generate(t *testing.T) {
 
 [INPUT]
     name http
+
+[FILTER]
+    add cluster devcluster
+    match *
+    name modify
 
 [OUTPUT]
     match *
@@ -70,10 +82,7 @@ func TestConfig_Generate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.config.Generate()
-			if diff := cmp.Diff(tt.want, got); diff != "" {
-				t.Logf("Got:\n\n%s\n", got)
-				t.Errorf("diff: %s", diff)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
