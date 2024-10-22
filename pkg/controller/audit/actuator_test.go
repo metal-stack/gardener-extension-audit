@@ -40,7 +40,7 @@ func TestSeedObjects_SplunkConfigCustomData(t *testing.T) {
 		},
 		{
 			desc:       "nil custom data",
-			customData: map[string]string{},
+			customData: nil,
 			assertion: func(t *testing.T, c string) {
 				assert.NotContains(t, c, "[FILTER]")
 			},
