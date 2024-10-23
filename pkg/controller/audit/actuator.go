@@ -567,7 +567,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.S
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: utils.IntStrPtrFromInt32(1),
+				MinAvailable: pointer.Pointer(intstr.FromInt32(1)),
 				Selector:     auditwebhookStatefulSet.Spec.Selector,
 			},
 		},
