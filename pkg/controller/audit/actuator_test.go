@@ -104,9 +104,9 @@ func TestValidateSplunkCustomData(t *testing.T) {
 			valid:  true,
 		},
 		{
-			desc: "single valid key/value pair",
+			desc: "single valid key/value pair with all allowed punctuation",
 			values: map[string]string{
-				"key1.KEY_1": "value1.VALUE_1",
+				"key-1.KEY_1": "value-1.VALUE_1",
 			},
 			valid: true,
 		},
