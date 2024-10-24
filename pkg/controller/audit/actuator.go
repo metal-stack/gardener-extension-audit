@@ -73,7 +73,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 
 	err := validateSplunkCustomData(auditConfig)
 	if err != nil {
-		return fmt.Errorf("failed to validate audit config: customData for splunk may only contain letters, numbers, and _ or . %w", err)
+		return fmt.Errorf("failed to validate audit config: customData for splunk may only contain letters, numbers, and the punctuation caracters - (minus), _ (underscore), . (period): %w", err)
 	}
 
 	backends, defaultBackendSecrets, err := a.applyDefaultBackends(ctx, log, auditConfig.Backends)
@@ -1214,7 +1214,7 @@ func validateSplunkCustomData(auditConfig *v1alpha1.AuditConfig) error {
 	return nil
 }
 
-var validSplunkCustomDataExpression = regexp.MustCompile("^[a-zA-Z0-9._]+$")
+var validSplunkCustomDataExpression = regexp.MustCompile("^[a-zA-Z0-9._-]+$")
 
 func isValidSplunkCustomDataString(s string) bool {
 	return validSplunkCustomDataExpression.MatchString(s)
