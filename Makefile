@@ -23,8 +23,6 @@ endif
 
 export GO111MODULE := on
 
-$(info Var is $(GARDENER_HACK_DIR))
-
 TOOLS_DIR := $(HACK_DIR)/tools
 include $(GARDENER_HACK_DIR)/tools.mk
 
