@@ -1,8 +1,6 @@
 module github.com/metal-stack/gardener-extension-audit
 
-go 1.22.0
-
-toolchain go1.22.8
+go 1.23.0
 
 require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0

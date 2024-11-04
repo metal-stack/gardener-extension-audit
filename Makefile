@@ -1,3 +1,5 @@
+ENSURE_GARDENER_MOD         := $(shell go get github.com/gardener/gardener@$$(go list -m -f "{{.Version}}" github.com/gardener/gardener))
+GARDENER_HACK_DIR    		:= $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener)/hack
 IMAGE_TAG                   := $(or ${GITHUB_TAG_NAME}, latest)
 REGISTRY                    := ghcr.io/metal-stack
 IMAGE_PREFIX                := $(REGISTRY)
@@ -10,8 +12,8 @@ LEADER_ELECTION             := false
 IGNORE_OPERATION_ANNOTATION := false
 WEBHOOK_CONFIG_URL          := localhost
 
-GOLANGCI_LINT_VERSION := v1.56.2
-GO_VERSION := 1.22
+GOLANGCI_LINT_VERSION := v1.61.0
+GO_VERSION := 1.23
 
 ifeq ($(CI),true)
   DOCKER_TTY_ARG=""
@@ -21,19 +23,27 @@ endif
 
 export GO111MODULE := on
 
-TOOLS_DIR := hack/tools
--include vendor/github.com/gardener/gardener/hack/tools.mk
+$(info Var is $(GARDENER_HACK_DIR))
+
+TOOLS_DIR := $(HACK_DIR)/tools
+include $(GARDENER_HACK_DIR)/tools.mk
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
 #################################################################
+
+.PHONY: tidy
+tidy:
+	@GO111MODULE=on go mod tidy
+	@mkdir -p $(REPO_ROOT)/.ci/hack && cp $(GARDENER_HACK_DIR)/.ci/* $(REPO_ROOT)/.ci/hack/ && chmod +xw $(REPO_ROOT)/.ci/hack/*
+
 
 .PHONY: build
 build:
 	go build -ldflags $(LD_FLAGS) -tags netgo -o bin/gardener-extension-audit ./cmd/gardener-extension-audit
 
 .PHONY: install
-install: revendor $(HELM)
+install: tidy $(HELM)
 	@LD_FLAGS="-w -X github.com/gardener/$(EXTENSION_PREFIX)-$(NAME)/pkg/version.Version=$(VERSION)" \
 	$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/install.sh ./...
 
@@ -52,29 +62,21 @@ docker-push:
 # Rules for verification, formatting, linting, testing and cleaning #
 #####################################################################
 
-.PHONY: revendor
-revendor:
-	@GO111MODULE=on go mod vendor
-	@GO111MODULE=on go mod tidy
-	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/*
-	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/.ci/*
-	@$(REPO_ROOT)/hack/update-github-templates.sh
-
 .PHONY: clean
 clean:
 	@$(shell find ./example -type f -name "controller-registration.yaml" -exec rm '{}' \;)
-	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/clean.sh ./cmd/... ./pkg/...
+	@bash $(GARDENER_HACK_DIR)/clean.sh ./cmd/... ./pkg/...
 
 .PHONY: check-generate
 check-generate:
 	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: generate
-generate: $(HELM)
-	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/generate-sequential.sh ./charts/... ./cmd/... ./pkg/...
+generate: $(VGOPATH) $(HELM) $(YQ)
+	@REPO_ROOT=$(REPO_ROOT) VGOPATH=$(VGOPATH) GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) bash $(GARDENER_HACK_DIR)/generate-sequential.sh ./charts/... ./cmd/... ./pkg/...
 
 .PHONY: generate-in-docker
-generate-in-docker: revendor $(HELM) $(YQ)
+generate-in-docker: tidy $(HELM) $(YQ)
 	echo $(shell git describe --abbrev=0 --tags) > VERSION
 	docker run --rm -i$(DOCKER_TTY_ARG) -v $(PWD):/go/src/github.com/metal-stack/gardener-extension-audit golang:$(GO_VERSION) \
 		sh -c "cd /go/src/github.com/metal-stack/gardener-extension-audit \

@@ -4,6 +4,11 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# setup virtual GOPATH
+source "$GARDENER_HACK_DIR"/vgopath-setup.sh
+
+CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
+
 # We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
 # see https://github.com/kubernetes/code-generator/issues/100.
 export GO111MODULE=off
@@ -12,9 +17,12 @@ rm -f $GOPATH/bin/*-gen
 
 PROJECT_ROOT=$(dirname $0)/..
 
+echo $GARDENER_HACK_DIR
+echo $CODE_GEN_DIR
+
 git config --global --add safe.directory /go/src/github.com/metal-stack/gardener-extension-audit
 
-bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${CODE_GEN_DIR}/generate-internal-groups.sh" \
   deepcopy,defaulter \
   github.com/metal-stack/gardener-extension-audit/pkg/client \
   github.com/metal-stack/gardener-extension-audit/pkg/apis \
@@ -22,7 +30,7 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   "audit:v1alpha1" \
   --go-header-file "${PROJECT_ROOT}/hack/boilerplate.txt"
 
-bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${CODE_GEN_DIR}/generate-internal-groups.sh" \
   conversion \
   github.com/metal-stack/gardener-extension-audit/pkg/client \
   github.com/metal-stack/gardener-extension-audit/pkg/apis \
@@ -31,7 +39,7 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   --extra-peer-dirs=github.com/metal-stack/gardener-extension-audit/pkg/apis/audit,github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
   --go-header-file "${PROJECT_ROOT}/hack/boilerplate.txt"
 
-bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${CODE_GEN_DIR}/generate-internal-groups.sh" \
   deepcopy,defaulter \
   github.com/metal-stack/gardener-extension-audit/pkg/client/componentconfig \
   github.com/metal-stack/gardener-extension-audit/pkg/apis \
@@ -39,7 +47,7 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   "config:v1alpha1" \
   --go-header-file "${PROJECT_ROOT}/hack/boilerplate.txt"
 
-bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${CODE_GEN_DIR}/generate-internal-groups.sh" \
   conversion \
   github.com/metal-stack/gardener-extension-audit/pkg/client/componentconfig \
   github.com/metal-stack/gardener-extension-audit/pkg/apis \
