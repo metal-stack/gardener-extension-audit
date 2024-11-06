@@ -17,9 +17,6 @@ rm -f $GOPATH/bin/*-gen
 
 PROJECT_ROOT=$(dirname $0)/..
 
-echo $GARDENER_HACK_DIR
-echo $CODE_GEN_DIR
-
 git config --global --add safe.directory /go/src/github.com/metal-stack/gardener-extension-audit
 
 bash "${CODE_GEN_DIR}/generate-internal-groups.sh" \
