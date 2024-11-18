@@ -78,6 +78,7 @@ generate: $(VGOPATH) $(HELM) $(YQ)
 generate-in-docker: tidy $(HELM) $(YQ)
 	docker run --rm -i$(DOCKER_TTY_ARG) -v $(PWD):/go/src/github.com/metal-stack/gardener-extension-audit golang:$(GO_VERSION) \
 		sh -c "cd /go/src/github.com/metal-stack/gardener-extension-audit \
+				&& chown -R $(shell id -u):$(shell id -g) ." \
 				&& make generate \
 				&& chown -R $(shell id -u):$(shell id -g) ."
 
