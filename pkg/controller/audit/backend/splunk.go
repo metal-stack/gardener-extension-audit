@@ -90,17 +90,19 @@ func (s Splunk) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Con
 		}
 	}
 
-	splunkConfigFilter := make(map[string]string, len(s.backend.CustomData)+2)
+	filters := []fluentbitconfig.Filter{}
 	if len(s.backend.CustomData) > 0 {
+		splunkConfigFilter := make(map[string]string, len(s.backend.CustomData)+2)
 		splunkConfigFilter["name"] = "modify"
 		splunkConfigFilter["match"] = "*"
 		for key, value := range s.backend.CustomData {
 			splunkConfigFilter["add "+key] = value
 		}
+		filters = append(filters, splunkConfigFilter)
 	}
 	fluentbitBackendSplunk := fluentbitconfig.Config{
 		Output: []fluentbitconfig.Output{splunkConfig},
-		Filter: []fluentbitconfig.Filter{splunkConfigFilter},
+		Filter: filters,
 	}
 	return fluentbitBackendSplunk
 }
