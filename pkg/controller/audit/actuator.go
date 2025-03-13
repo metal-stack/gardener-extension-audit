@@ -120,19 +120,17 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 		if err := shootAccessSecret.Reconcile(ctx, a.client); err != nil {
 			return nil, err
 		}
-		gatewayReplicas := getReplicas(cluster, pointer.Pointer(int32(1)))
 
-		auditTailerServerSecret := secrets["audittailer-server"]
-		auditTailerClientSecret := secrets["audittailer-client"]
 		clusterForwardingBackend, err := backend.NewClusterForwarding(backends.ClusterForwarding,
-			auditTailerClientSecret,
-			auditTailerServerSecret,
+			secrets["audittailer-client"],
+			secrets["audittailer-server"],
 			shootAccessSecret,
-			*gatewayReplicas,
+			pointer.SafeDeref(getReplicas(cluster, pointer.Pointer(int32(1)))),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error creating cluster-forwarding backend: %w", err)
 		}
+
 		backendMap["cluster-forwarding"] = clusterForwardingBackend
 	}
 
@@ -141,10 +139,12 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 		if err != nil {
 			return nil, err
 		}
+
 		splunkBackend, err := backend.NewSplunk(backends.Splunk, splunkSecret)
 		if err != nil {
 			return nil, fmt.Errorf("error creating splunk backend: %w", err)
 		}
+
 		backendMap["splunk"] = splunkBackend
 	}
 
@@ -168,7 +168,6 @@ func (a *actuator) applyDefaultBackends(ctx context.Context, log logr.Logger, ba
 			if err != nil {
 				return fmt.Errorf("unable to get default backend secret: %w", err)
 			}
-
 			secrets[secretName] = secret
 
 			return nil
