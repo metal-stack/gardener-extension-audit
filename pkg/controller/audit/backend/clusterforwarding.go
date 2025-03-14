@@ -335,9 +335,13 @@ func (c ClusterForwarding) AdditionalShootObjects(*extensions.Cluster) []client.
 }
 
 func (c ClusterForwarding) AdditionalSeedObjects(cluster *extensions.Cluster) []client.Object {
+	// namespace of the control plane equals to the name of the cluster object
+	namespace := cluster.ObjectMeta.Name
+
 	vpnGateway := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "audit-cluster-forwarding-vpn-gateway",
+			Name:      "audit-cluster-forwarding-vpn-gateway",
+			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &c.vpnGatewayReplicas,
@@ -398,5 +402,69 @@ func (c ClusterForwarding) AdditionalSeedObjects(cluster *extensions.Cluster) []
 		// Deployments are always possible to inject kubeconfigs into.
 		panic(err)
 	}
-	return []client.Object{vpnGateway}
+	return []client.Object{
+		vpnGateway,
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-cluster-forwarding-vpn-gateway",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "audit-cluster-forwarding-vpn-gateway",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Selector: map[string]string{
+					"app": "audit-cluster-forwarding-vpn-gateway",
+				},
+				Ports: []corev1.ServicePort{
+					{
+						Port:       9876,
+						TargetPort: intstr.FromInt(9876),
+					},
+				},
+			},
+		},
+		&corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-cluster-forwarding-vpn-gateway",
+				Namespace: namespace,
+			},
+		},
+		&rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-cluster-forwarding-vpn-gateway",
+				Namespace: namespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"secrets",
+					},
+					Verbs: []string{
+						"get",
+						"list",
+					},
+				},
+			},
+		},
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "audit-cluster-forwarding-vpn-gateway",
+				Namespace: namespace,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "audit-cluster-forwarding-vpn-gateway",
+					Namespace: namespace,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "audit-cluster-forwarding-vpn-gateway",
+			},
+		},
+	}
 }
