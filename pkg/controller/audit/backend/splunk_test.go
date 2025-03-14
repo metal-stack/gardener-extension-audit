@@ -34,14 +34,14 @@ func Test_SplunkFluentBitConfig(t *testing.T) {
 			desc:       "empty custom data",
 			customData: map[string]string{},
 			assertion: func(t *testing.T, c fluentbitconfig.Config) {
-				assert.Len(t, c.Filter, 0)
+				assert.Empty(t, c.Filter)
 			},
 		},
 		{
 			desc:       "nil custom data",
 			customData: nil,
 			assertion: func(t *testing.T, c fluentbitconfig.Config) {
-				assert.Len(t, c.Filter, 0)
+				assert.Empty(t, c.Filter)
 			},
 		},
 	}

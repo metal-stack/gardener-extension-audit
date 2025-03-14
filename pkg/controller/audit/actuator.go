@@ -98,7 +98,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		return err
 	}
 
-	if err := a.createResources(ctx, log, auditConfig, cluster, secrets, shootBackends, namespace); err != nil {
+	if err := a.createResources(ctx, log, auditConfig, cluster, shootBackends, namespace); err != nil {
 		return err
 	}
 
@@ -226,13 +226,13 @@ func (a *actuator) Migrate(ctx context.Context, log logr.Logger, ex *extensionsv
 	return nil
 }
 
-func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster, secrets map[string]*corev1.Secret, backends map[string]backend.Backend, namespace string) error {
+func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster, backends map[string]backend.Backend, namespace string) error {
 	shootObjects := []client.Object{}
 	for _, backend := range backends {
 		shootObjects = append(shootObjects, backend.AdditionalShootObjects(cluster)...)
 	}
 
-	seedObjects, err := seedObjects(auditConfig, secrets, cluster, backends, namespace)
+	seedObjects, err := seedObjects(auditConfig, cluster, backends, namespace)
 	if err != nil {
 		return err
 	}
@@ -344,7 +344,7 @@ func (a *actuator) generateCerts(ctx context.Context, log logr.Logger, cluster *
 	return secrets, nil
 }
 
-func seedObjects(auditConfig *v1alpha1.AuditConfig, secrets map[string]*corev1.Secret, cluster *extensions.Cluster, backends map[string]backend.Backend, namespace string) ([]client.Object, error) {
+func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster, backends map[string]backend.Backend, namespace string) ([]client.Object, error) {
 	fluentBitImage, err := imagevector.ImageVector().FindImage("fluent-bit")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find fluent-bit image: %w", err)
