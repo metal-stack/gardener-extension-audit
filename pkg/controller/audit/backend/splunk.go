@@ -60,6 +60,7 @@ func validateCustomData(splunk *v1alpha1.AuditBackendSplunk) error {
 
 const (
 	caFilePath = "/backends/splunk/certs/ca.crt"
+	//nolint:gosec // just the name of the secret reference
 	secretName = "audit-splunk-secret"
 )
 
