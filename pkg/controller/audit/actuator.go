@@ -151,7 +151,7 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 	return backendMap, nil
 }
 
-// applyDefaultBackends adds default backends configured by the operator to the audit config in case this backend is not explcitly defined by the user.
+// applyDefaultBackends adds default backends configured by the operator to the audit config in case this backend is not explicitly defined by the user.
 // it returns the backends to which defaults were applied and a map of secrets that contains secrets referenced by the operator's default backends.
 func (a *actuator) applyDefaultBackends(ctx context.Context, log logr.Logger, backends *v1alpha1.AuditBackends) (*v1alpha1.AuditBackends, map[string]*corev1.Secret, error) {
 	var (

@@ -337,7 +337,8 @@ func (c ClusterForwarding) AdditionalShootObjects(*extensions.Cluster) []client.
 func (c ClusterForwarding) AdditionalSeedObjects(cluster *extensions.Cluster) []client.Object {
 	vpnGateway := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "audit-cluster-forwarding-vpn-gateway",
+			Name:      "audit-cluster-forwarding-vpn-gateway",
+			Namespace: cluster.ObjectMeta.Name,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &c.vpnGatewayReplicas,
