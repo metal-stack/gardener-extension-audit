@@ -85,7 +85,7 @@ func (o *Options) run(ctx context.Context) error {
 	ctrlConfig := o.auditOptions.Completed()
 	ctrlConfig.Apply(&audit.DefaultAddOptions.Config)
 	o.controllerOptions.Completed().Apply(&audit.DefaultAddOptions.ControllerOptions)
-	o.reconcileOptions.Completed().Apply(&audit.DefaultAddOptions.IgnoreOperationAnnotation)
+	o.reconcileOptions.Completed().Apply(&audit.DefaultAddOptions.IgnoreOperationAnnotation, &audit.DefaultAddOptions.ExtensionClass)
 	o.heartbeatOptions.Completed().Apply(&heartbeatcontroller.DefaultAddOptions)
 
 	if err := o.controllerSwitches.Completed().AddToManager(ctx, mgr); err != nil {
