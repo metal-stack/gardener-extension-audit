@@ -58,7 +58,7 @@ func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, audit
 		gardenerVpnGatewayImage: gardenerVpnGatewayImage,
 		auditTailerImage:        audittailerImage,
 		auditTailerServerSecret: auditTailerServerSecret,
-		auditTailerClientSecret: auditTailerServerSecret,
+		auditTailerClientSecret: auditTailerClientSecret,
 		vpnGatewayReplicas:      vpnGatewayReplicas,
 		shootAccessSecret:       shootAccessSecret,
 	}, nil
