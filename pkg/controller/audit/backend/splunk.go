@@ -147,10 +147,11 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 	sts.Spec.Template.ObjectMeta.Annotations["checksum/splunk-secret"] = utils.ComputeSecretChecksum(s.secret.Data)
 }
 
-func (s Splunk) AdditionalSeedObjects(*extensions.Cluster) []client.Object {
+func (s Splunk) AdditionalSeedObjects(cluster *extensions.Cluster) []client.Object {
 	splunkSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: secretName,
+			Name:      secretName,
+			Namespace: cluster.ObjectMeta.Name,
 		},
 		Data: map[string][]byte{
 			"splunk_hec_token": s.secret.Data[v1alpha1.SplunkSecretTokenKey],
@@ -161,6 +162,7 @@ func (s Splunk) AdditionalSeedObjects(*extensions.Cluster) []client.Object {
 	if ok {
 		splunkSecret.Data["ca.crt"] = caFile
 	}
+
 	return []client.Object{splunkSecret}
 }
 
