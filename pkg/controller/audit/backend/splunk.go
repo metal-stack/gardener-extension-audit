@@ -81,6 +81,7 @@ func (s Splunk) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Con
 		"event_index":              s.backend.Index,
 		"event_host":               cluster.ObjectMeta.Name,
 	}
+
 	_, ok := s.secret.Data[v1alpha1.SplunkSecretCaFileKey]
 	if ok {
 		splunkConfig["tls.ca_file"] = caFilePath
@@ -123,6 +124,7 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 			},
 		},
 	})
+
 	_, ok := s.secret.Data[v1alpha1.SplunkSecretCaFileKey]
 	if ok {
 		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -139,6 +141,7 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 				},
 			},
 		})
+
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      "splunk-secret",
 			MountPath: path.Dir(caFilePath),
