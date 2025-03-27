@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"path"
 	"regexp"
 
 	"github.com/gardener/gardener/pkg/extensions"
@@ -140,7 +141,7 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 		})
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      "splunk-secret",
-			MountPath: caFilePath,
+			MountPath: path.Dir(caFilePath),
 		})
 	}
 
