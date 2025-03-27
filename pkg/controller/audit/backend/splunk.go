@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"path"
 	"regexp"
 
 	"github.com/gardener/gardener/pkg/extensions"
@@ -25,13 +26,15 @@ func NewSplunk(backend *v1alpha1.AuditBackendSplunk, secret *corev1.Secret) (Spl
 	if err != nil {
 		return Splunk{}, err
 	}
+
 	_, ok := secret.Data[v1alpha1.SplunkSecretTokenKey]
 	if !ok {
 		return Splunk{}, fmt.Errorf("referenced splunk secret does not contain contents under key %q", v1alpha1.SplunkSecretTokenKey)
 	}
+
 	return Splunk{
 		backend: backend,
-		secret:  nil,
+		secret:  secret,
 	}, nil
 }
 
@@ -78,6 +81,7 @@ func (s Splunk) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Con
 		"event_index":              s.backend.Index,
 		"event_host":               cluster.ObjectMeta.Name,
 	}
+
 	_, ok := s.secret.Data[v1alpha1.SplunkSecretCaFileKey]
 	if ok {
 		splunkConfig["tls.ca_file"] = caFilePath
@@ -120,6 +124,7 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 			},
 		},
 	})
+
 	_, ok := s.secret.Data[v1alpha1.SplunkSecretCaFileKey]
 	if ok {
 		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -136,19 +141,21 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 				},
 			},
 		})
+
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      "splunk-secret",
-			MountPath: caFilePath,
+			MountPath: path.Dir(caFilePath),
 		})
 	}
 
 	sts.Spec.Template.ObjectMeta.Annotations["checksum/splunk-secret"] = utils.ComputeSecretChecksum(s.secret.Data)
 }
 
-func (s Splunk) AdditionalSeedObjects(*extensions.Cluster) []client.Object {
+func (s Splunk) AdditionalSeedObjects(cluster *extensions.Cluster) []client.Object {
 	splunkSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: secretName,
+			Name:      secretName,
+			Namespace: cluster.ObjectMeta.Name,
 		},
 		Data: map[string][]byte{
 			"splunk_hec_token": s.secret.Data[v1alpha1.SplunkSecretTokenKey],
@@ -159,6 +166,7 @@ func (s Splunk) AdditionalSeedObjects(*extensions.Cluster) []client.Object {
 	if ok {
 		splunkSecret.Data["ca.crt"] = caFile
 	}
+
 	return []client.Object{splunkSecret}
 }
 
