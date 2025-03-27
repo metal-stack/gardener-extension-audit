@@ -25,13 +25,15 @@ func NewSplunk(backend *v1alpha1.AuditBackendSplunk, secret *corev1.Secret) (Spl
 	if err != nil {
 		return Splunk{}, err
 	}
+
 	_, ok := secret.Data[v1alpha1.SplunkSecretTokenKey]
 	if !ok {
 		return Splunk{}, fmt.Errorf("referenced splunk secret does not contain contents under key %q", v1alpha1.SplunkSecretTokenKey)
 	}
+
 	return Splunk{
 		backend: backend,
-		secret:  nil,
+		secret:  secret,
 	}, nil
 }
 
