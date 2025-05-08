@@ -87,14 +87,14 @@ type AuditBackendClusterForwarding struct {
 	// Enabled allows to turn this backend on.
 	Enabled bool `json:"enabled"`
 
-	// FilesystemBufferSize is the maximum disk space for the fluent-bit file sytem buffer.
+	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
 	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 }
 type AuditBackendSplunk struct {
 	// Enabled allows to turn this backend on.
 	Enabled bool `json:"enabled"`
 
-	// FilesystemBufferSize is the maximum disk space for the fluent-bit file sytem buffer.
+	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
 	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 
 	// Index is the splunk index that should be used.
@@ -103,7 +103,7 @@ type AuditBackendSplunk struct {
 	// Host is the hostname or IP of the splunk HEC endpoint.
 	Host string `json:"host"`
 
-	// Port ist the port on which the HEC endpoint is listening.
+	// Port is the port on which the HEC endpoint is listening.
 	Port string `json:"port"`
 
 	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the splunk backend.

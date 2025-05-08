@@ -1,9 +1,8 @@
-apiVersion: core.gardener.cloud/v1beta1
+apiVersion: core.gardener.cloud/v1
 kind: ControllerDeployment
 metadata:
   name: audit
-type: helm
-providerConfig:
+helm:
   values:
     image:
       tag: latest

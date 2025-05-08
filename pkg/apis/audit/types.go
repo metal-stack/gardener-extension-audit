@@ -65,7 +65,7 @@ type AuditBackendClusterForwarding struct {
 	// Enabled allows to turn this backend on.
 	Enabled bool
 
-	// FilesystemBufferSize is the maximum disk space for the fluent-bit file sytem buffer.
+	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
 	FilesystemBufferSize *string
 }
 
@@ -73,7 +73,7 @@ type AuditBackendSplunk struct {
 	// Enabled allows to turn this backend on.
 	Enabled bool
 
-	// FilesystemBufferSize is the maximum disk space for the fluent-bit file sytem buffer.
+	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
 	FilesystemBufferSize *string
 
 	// Index is the splunk index that should be used.
@@ -82,7 +82,7 @@ type AuditBackendSplunk struct {
 	// Host is the hostname or IP of the splunk HEC endpoint.
 	Host string
 
-	// Port ist the port on which the HEC endpoint is listening.
+	// Port is the port on which the HEC endpoint is listening.
 	Port string
 
 	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the splunk backend.

@@ -6,3 +6,4 @@ helm
 .vscode
 hack/tools/bin/*
 bin
+.ci/
