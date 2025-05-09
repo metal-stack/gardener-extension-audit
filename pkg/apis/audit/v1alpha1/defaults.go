@@ -34,6 +34,7 @@ func DefaultBackends(backends *AuditBackends) {
 
 	defaultBackendClusterForwarding(backends.ClusterForwarding)
 	defaultBackendSplunk(backends.Splunk)
+	defaultBackendS3(backends.S3)
 }
 
 func defaultBackendClusterForwarding(backend *AuditBackendClusterForwarding) {
@@ -47,6 +48,16 @@ func defaultBackendClusterForwarding(backend *AuditBackendClusterForwarding) {
 }
 
 func defaultBackendSplunk(backend *AuditBackendSplunk) {
+	if backend == nil {
+		return
+	}
+
+	if backend.FilesystemBufferSize == nil {
+		backend.FilesystemBufferSize = pointer.Pointer("900M")
+	}
+}
+
+func defaultBackendS3(backend *AuditBackendS3) {
 	if backend == nil {
 		return
 	}
