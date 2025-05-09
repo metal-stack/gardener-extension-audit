@@ -10,6 +10,7 @@ import (
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -102,9 +103,22 @@ func (s S3) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 }
 
 func (s S3) AdditionalShootObjects(*extensions.Cluster) []client.Object {
-	return nil
+	// No objects needed in the shoot cluster
+	return []client.Object{}
 }
 
-func (s S3) AdditionalSeedObjects(*extensions.Cluster) []client.Object {
-	return nil
+func (s S3) AdditionalSeedObjects(cluster *extensions.Cluster) []client.Object {
+	// Create a secret in the seed cluster containing the credentials
+	s3Secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: cluster.ObjectMeta.Name,
+		},
+		Data: map[string][]byte{
+			"access_key_id":     s.secret.Data[s3SecretAccessKeyIDKey],
+			"secret_access_key": s.secret.Data[s3SecretSecretAccessKeyKey],
+		},
+	}
+
+	return []client.Object{s3Secret}
 }
