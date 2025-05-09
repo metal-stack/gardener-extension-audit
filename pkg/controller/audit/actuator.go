@@ -148,6 +148,20 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 		backendMap["splunk"] = splunkBackend
 	}
 
+	if pointer.SafeDeref(backends.S3).Enabled {
+		s3Secret, err := a.findBackendSecret(ctx, cluster, secrets, backends.Splunk.SecretResourceName)
+		if err != nil {
+			return nil, err
+		}
+
+		s3Backend, err := backend.NewS3(backends.S3, s3Secret)
+		if err != nil {
+			return nil, fmt.Errorf("error creating s3 backend: %w", err)
+		}
+
+		backendMap["s3"] = s3Backend
+	}
+
 	return backendMap, nil
 }
 
