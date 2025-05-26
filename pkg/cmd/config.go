@@ -4,7 +4,7 @@ import (
 	"errors"
 	"os"
 
-	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	healthcheckconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	configapi "github.com/metal-stack/gardener-extension-audit/pkg/apis/config"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/config/v1alpha1"
 
@@ -81,7 +81,7 @@ func (c *AuthServiceConfig) Apply(config *configapi.ControllerConfiguration) {
 }
 
 // ApplyHealthCheckConfig applies the HealthCheckConfig.
-func (c *AuthServiceConfig) ApplyHealthCheckConfig(config *healthcheckconfig.HealthCheckConfig) {
+func (c *AuthServiceConfig) ApplyHealthCheckConfig(config *healthcheckconfigv1alpha1.HealthCheckConfig) {
 	if c.config.HealthCheckConfig != nil {
 		*config = *c.config.HealthCheckConfig
 	}

@@ -20,7 +20,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	componentbaseconfig "k8s.io/component-base/config"
+	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
 
 var log = logf.Log.WithName("gardener-extension-audit")
@@ -53,7 +53,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 }
 
 func (o *Options) run(ctx context.Context) error {
-	util.ApplyClientConnectionConfigurationToRESTConfig(&componentbaseconfig.ClientConnectionConfiguration{
+	util.ApplyClientConnectionConfigurationToRESTConfig(&configv1alpha1.ClientConnectionConfiguration{
 		QPS:   100.0,
 		Burst: 130,
 	}, o.restOptions.Completed().Config)
