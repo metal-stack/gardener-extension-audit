@@ -52,8 +52,6 @@ func (s S3) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Config 
 		"upload_timeout":           "10m",
 		"use_put_object":           "On",
 		"s3_key_format":            "/audit-logs/%Y/%m/%d/%H/%M/%S",
-		"access_key_id":            "${AWS_ACCESS_KEY_ID}",
-		"secret_access_key":        "${AWS_SECRET_ACCESS_KEY}",
 	}
 
 	if s.backend.Prefix != "" {
