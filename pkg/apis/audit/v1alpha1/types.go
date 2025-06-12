@@ -92,6 +92,7 @@ type AuditBackendClusterForwarding struct {
 	Enabled bool `json:"enabled"`
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
+	// +optional
 	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 }
 type AuditBackendSplunk struct {
@@ -99,6 +100,7 @@ type AuditBackendSplunk struct {
 	Enabled bool `json:"enabled"`
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
+	// +optional
 	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 
 	// Index is the splunk index that should be used.
@@ -134,6 +136,7 @@ type AuditBackendS3 struct {
 	Enabled bool `json:"enabled"`
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
+	// +optional
 	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 
 	// Bucket is the S3 bucket name where audit logs will be stored.
@@ -142,9 +145,13 @@ type AuditBackendS3 struct {
 	// Region is the AWS region where the bucket is located.
 	Region string `json:"region"`
 
-	// Prefix is the prefix (folder path) where audit logs will be stored in the bucket.
+	// Prefix is the prefix (folder path) where audit logs will be stored in the bucket. Defaults to "/audit-logs".
 	// +optional
-	Prefix string `json:"prefix,omitempty"`
+	Prefix *string `json:"prefix,omitempty"`
+
+	// S3KeyFormat is the folder structure in which the audit logs will be stored in the bucket. Defaults to "/%Y/%m/%d/%H/%M/%S/$UUID".
+	// +optional
+	S3KeyFormat *string `json:"s3KeyFormat,omitempty"`
 
 	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against AWS.
 	// The referenced secret must contain:
@@ -154,9 +161,21 @@ type AuditBackendS3 struct {
 
 	// Endpoint is the custom S3 endpoint URL (optional, for S3-compatible storage).
 	// +optional
-	Endpoint string `json:"endpoint,omitempty"`
+	Endpoint *string `json:"endpoint,omitempty"`
 
-	// TlsEnabled determines whether TLS should be used to communicate with S3.
+	// TlsEnabled determines whether TLS should be used to communicate with S3. Defaults to "true".
 	// +optional
-	TlsEnabled bool `json:"tlsEnabled,omitempty"`
+	TlsEnabled *bool `json:"tlsEnabled,omitempty"`
+
+	// TotalFileSize specify file size in S3. Minimum size is 1M, maximum size is 1G. Defaults to 100M.
+	// +optional
+	TotalFileSize *string `json:"totalFileSize,omitempty"`
+
+	// UploadTimeout specify the amount of time in which the logs are uploaded and creates a new file in S3. Defaults to 10m.
+	// +optional
+	UploadTimeout *string `json:"uploadTimeout,omitempty"`
+
+	// UseCompression enables gzip compression for the S3 objects.
+	// +optional
+	UseCompression *bool `json:"useCompression,omitempty"`
 }

@@ -38,32 +38,45 @@ func NewS3(backend *v1alpha1.AuditBackendS3, secret *corev1.Secret) (S3, error) 
 	}, nil
 }
 
-func (s S3) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Config {
+func (s S3) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
 	s3Config := map[string]string{
-		"match":                    "audit",
-		"name":                     "s3",
-		"retry_limit":              "no_limits", // Let FluentBit never discard any data
-		"storage.total_limit_size": pointer.SafeDeref(s.backend.FilesystemBufferSize),
-		"bucket":                   s.backend.Bucket,
-		"region":                   s.backend.Region,
-		"json_date_key":            "timestamp",
-		"total_file_size":          "50M",
-		"upload_timeout":           "10m",
-		"use_put_object":           "On",
-		"s3_key_format":            "/audit-logs/%Y/%m/%d/%H/%M/%S",
+		"match":                "audit",
+		"name":                 "s3",
+		"retry_limit":          "no_limits", // Let FluentBit only discard data if store_dir_limit_size is reached
+		"store_dir_limit_size": pointer.SafeDeref(s.backend.FilesystemBufferSize),
+		"bucket":               s.backend.Bucket,
+		"region":               s.backend.Region,
+		"json_date_key":        "timestamp",
+		"use_put_object":       "On",
 	}
 
-	if s.backend.Prefix != "" {
-		s3Config["s3_key_format"] = path.Join(s.backend.Prefix, s3Config["s3_key_format"])
+	if s.backend.S3KeyFormat != nil {
+		s3Config["s3_key_format"] = *s.backend.S3KeyFormat
 	}
 
-	if s.backend.Endpoint != "" {
-		s3Config["endpoint"] = s.backend.Endpoint
+	if s.backend.Prefix != nil {
+		s3Config["s3_key_format"] = path.Join(*s.backend.Prefix, s3Config["s3_key_format"])
 	}
 
-	if s.backend.TlsEnabled {
-		s3Config["tls"] = "on"
-		s3Config["tls.verify"] = "on"
+	if s.backend.Endpoint != nil {
+		s3Config["endpoint"] = *s.backend.Endpoint
+	}
+
+	if s.backend.UploadTimeout != nil {
+		s3Config["upload_timeout"] = *s.backend.UploadTimeout
+	}
+
+	if s.backend.TotalFileSize != nil {
+		s3Config["total_file_size"] = *s.backend.TotalFileSize
+	}
+
+	if s.backend.TlsEnabled != nil && *s.backend.TlsEnabled {
+		s3Config["tls"] = "On"
+	}
+
+	if s.backend.UseCompression != nil && *s.backend.UseCompression {
+		s3Config["compression"] = "gzip"
+
 	}
 
 	return fluentbitconfig.Config{

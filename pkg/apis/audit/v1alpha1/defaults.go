@@ -65,4 +65,24 @@ func defaultBackendS3(backend *AuditBackendS3) {
 	if backend.FilesystemBufferSize == nil {
 		backend.FilesystemBufferSize = pointer.Pointer("900M")
 	}
+
+	if backend.TlsEnabled == nil {
+		backend.TlsEnabled = pointer.Pointer(true)
+	}
+
+	if backend.TotalFileSize == nil {
+		backend.TotalFileSize = pointer.Pointer("100M")
+	}
+
+	if backend.UploadTimeout == nil {
+		backend.UploadTimeout = pointer.Pointer("10m")
+	}
+
+	if backend.Prefix == nil {
+		backend.Prefix = pointer.Pointer("/audit-logs")
+	}
+
+	if backend.S3KeyFormat == nil {
+		backend.S3KeyFormat = pointer.Pointer("/%Y/%m/%d/%H/%M/%S/$UUID")
+	}
 }
