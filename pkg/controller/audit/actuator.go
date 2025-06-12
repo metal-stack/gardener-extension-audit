@@ -149,7 +149,7 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 	}
 
 	if pointer.SafeDeref(backends.S3).Enabled {
-		s3Secret, err := a.findBackendSecret(ctx, cluster, secrets, backends.Splunk.SecretResourceName)
+		s3Secret, err := a.findBackendSecret(ctx, cluster, secrets, backends.S3.SecretResourceName)
 		if err != nil {
 			return nil, err
 		}
