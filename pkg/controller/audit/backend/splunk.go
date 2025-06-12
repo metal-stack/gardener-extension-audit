@@ -12,7 +12,6 @@ import (
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -63,8 +62,6 @@ func validateCustomData(splunk *v1alpha1.AuditBackendSplunk) error {
 
 const (
 	caFilePath = "/backends/splunk/certs/ca.crt"
-	//nolint:gosec // just the name of the secret reference
-	secretName = "audit-splunk-secret"
 )
 
 func (s Splunk) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Config {
@@ -118,9 +115,9 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 		ValueFrom: &corev1.EnvVarSource{
 			SecretKeyRef: &corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: secretName,
+					Name: s.secret.Name,
 				},
-				Key: "splunk_hec_token",
+				Key: v1alpha1.SplunkSecretTokenKey,
 			},
 		},
 	})
@@ -131,10 +128,10 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 			Name: "splunk-secret",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretName,
+					SecretName: s.secret.Name,
 					Items: []corev1.KeyToPath{
 						{
-							Key:  "ca.crt",
+							Key:  v1alpha1.SplunkSecretCaFileKey,
 							Path: "ca.crt",
 						},
 					},
@@ -151,23 +148,8 @@ func (s Splunk) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 	sts.Spec.Template.ObjectMeta.Annotations["checksum/splunk-secret"] = utils.ComputeSecretChecksum(s.secret.Data)
 }
 
-func (s Splunk) AdditionalSeedObjects(cluster *extensions.Cluster) []client.Object {
-	splunkSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: cluster.ObjectMeta.Name,
-		},
-		Data: map[string][]byte{
-			"splunk_hec_token": s.secret.Data[v1alpha1.SplunkSecretTokenKey],
-		},
-	}
-
-	caFile, ok := s.secret.Data[v1alpha1.SplunkSecretCaFileKey]
-	if ok {
-		splunkSecret.Data["ca.crt"] = caFile
-	}
-
-	return []client.Object{splunkSecret}
+func (s Splunk) AdditionalSeedObjects(*extensions.Cluster) []client.Object {
+	return []client.Object{}
 }
 
 func (s Splunk) AdditionalShootObjects(*extensions.Cluster) []client.Object {
