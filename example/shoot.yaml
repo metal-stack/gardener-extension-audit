@@ -37,11 +37,15 @@ spec:
         #   enabled: true
         #   bucket: "my-audit-logs"
         #   region: "eu-west-1"
-        #   prefix: "cluster-logs"  # optional
         #   secretResourceName: s3-secret
+        #   prefix: "cluster-logs"  # optional
+        #   s3KeyFormat: "/%Y/%m/%d/$UUID" # optional
         #   filesystemBufferSize: "1G"  # optional
-        #   endpoint: "https://custom-s3-endpoint"  # optional, for S3-compatible storage
+        #   endpoint: "https://custom-s3-endpoint" # optional, for S3-compatible storage
         #   tlsEnabled: true  # optional
+        #   totalFileSize: "99M" # optional
+        #   uploadTimeout: "1m" # optional
+        #   useCompression: true # optional
   # resources:
   #   - name: splunk-secret
   #     resourceRef:
