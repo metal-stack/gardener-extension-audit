@@ -3,6 +3,7 @@ package backend
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
@@ -24,18 +25,47 @@ type S3 struct {
 }
 
 func NewS3(backend *v1alpha1.AuditBackendS3, secret *corev1.Secret) (S3, error) {
-	if _, ok := secret.Data[s3SecretAccessKeyIDKey]; !ok {
-		return S3{}, fmt.Errorf("referenced S3 secret does not contain %q", s3SecretAccessKeyIDKey)
+	if err := validateS3Secret(secret); err != nil {
+		return S3{}, err
 	}
-
-	if _, ok := secret.Data[s3SecretSecretAccessKeyKey]; !ok {
-		return S3{}, fmt.Errorf("referenced S3 secret does not contain %q", s3SecretSecretAccessKeyKey)
+	if err := validateS3Backend(backend); err != nil {
+		return S3{}, err
 	}
 
 	return S3{
 		backend: backend,
 		secret:  secret,
 	}, nil
+}
+
+func validateS3Backend(backend *v1alpha1.AuditBackendS3) error {
+	if backend.Bucket == "" {
+		return fmt.Errorf("backend must contain a bucket")
+	}
+	if backend.Region == "" {
+		return fmt.Errorf("backend must contain a region")
+	}
+
+	if !strings.HasPrefix(pointer.SafeDeref(backend.S3KeyFormat), "/") {
+		return fmt.Errorf("s3KeyFormat must start with a /")
+	}
+
+	if !strings.HasPrefix(pointer.SafeDeref(backend.Prefix), "/") {
+		return fmt.Errorf("prefix must start with a /")
+	}
+
+	return nil
+}
+
+func validateS3Secret(secret *corev1.Secret) error {
+	if _, ok := secret.Data[s3SecretAccessKeyIDKey]; !ok {
+		return fmt.Errorf("referenced S3 secret does not contain %q", s3SecretAccessKeyIDKey)
+	}
+
+	if _, ok := secret.Data[s3SecretSecretAccessKeyKey]; !ok {
+		return fmt.Errorf("referenced S3 secret does not contain %q", s3SecretSecretAccessKeyKey)
+	}
+	return nil
 }
 
 func (s S3) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {

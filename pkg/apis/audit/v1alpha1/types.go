@@ -145,11 +145,11 @@ type AuditBackendS3 struct {
 	// Region is the AWS region where the bucket is located.
 	Region string `json:"region"`
 
-	// Prefix is the prefix (folder path) where audit logs will be stored in the bucket. Defaults to "/audit-logs".
+	// Prefix is the prefix (folder path) where audit logs will be stored in the bucket. Must start with a /. Defaults to "/audit-logs".
 	// +optional
 	Prefix *string `json:"prefix,omitempty"`
 
-	// S3KeyFormat is the folder structure in which the audit logs will be stored in the bucket. Defaults to "/%Y/%m/%d/%H/%M/%S/$UUID".
+	// S3KeyFormat is the folder structure in which the audit logs will be stored in the bucket. Must start with a /. Defaults to "/%Y/%m/%d/%H/%M/%S/$UUID".
 	// +optional
 	S3KeyFormat *string `json:"s3KeyFormat,omitempty"`
 

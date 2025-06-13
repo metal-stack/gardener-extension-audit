@@ -16,28 +16,90 @@ func Test_S3FluentBitConfig(t *testing.T) {
 		s3SecretSecretAccessKeyKey: []byte("secret"),
 	}
 	tt := []struct {
-		desc       string
-		backend    v1alpha1.AuditBackendS3
-		secretData map[string][]byte
-		valid      bool
-		assertion  func(*testing.T, fluentbitconfig.Config)
+		desc            string
+		backend         v1alpha1.AuditBackendS3
+		secretData      map[string][]byte
+		assertionError  func(*testing.T, error)
+		assertionConfig func(*testing.T, fluentbitconfig.Config)
 	}{
 		{
 			desc: "secret missing",
 			backend: v1alpha1.AuditBackendS3{
 				Enabled: true,
+				Bucket:  "bucket",
+				Region:  "region",
 			},
 			secretData: map[string][]byte{},
-			valid:      false,
+			assertionError: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "secret")
+			},
+		},
+		{
+			desc: "missing bucket",
+			backend: v1alpha1.AuditBackendS3{
+				Enabled: true,
+				Region:  "region",
+			},
+			secretData: validSecretData,
+			assertionError: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "bucket")
+			},
+		},
+		{
+			desc: "missing region",
+			backend: v1alpha1.AuditBackendS3{
+				Enabled: true,
+				Bucket:  "bucket",
+			},
+			secretData: validSecretData,
+			assertionError: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "region")
+			},
+		},
+		{
+			desc: "prefix dose not start with /",
+			backend: v1alpha1.AuditBackendS3{
+				Enabled: true,
+				Bucket:  "bucket",
+				Region:  "region",
+				Prefix:  pointer.Pointer("audit"),
+			},
+			secretData: validSecretData,
+			assertionError: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "prefix")
+			},
+		},
+
+		{
+			desc: "prefix dose not start with /",
+			backend: v1alpha1.AuditBackendS3{
+				Enabled:     true,
+				Bucket:      "bucket",
+				Region:      "region",
+				S3KeyFormat: pointer.Pointer("audit"),
+			},
+			secretData: validSecretData,
+			assertionError: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "s3KeyFormat")
+			},
 		},
 		{
 			desc: "valid secret",
 			backend: v1alpha1.AuditBackendS3{
 				Enabled: true,
+				Bucket:  "bucket",
+				Region:  "region",
 			},
 			secretData: validSecretData,
-			valid:      true,
-			assertion:  func(t *testing.T, c fluentbitconfig.Config) {},
+			assertionError: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+			assertionConfig: func(t *testing.T, c fluentbitconfig.Config) {},
 		},
 		{
 			desc: "with default config",
@@ -47,8 +109,10 @@ func Test_S3FluentBitConfig(t *testing.T) {
 				Region:  "region",
 			},
 			secretData: validSecretData,
-			valid:      true,
-			assertion: func(t *testing.T, c fluentbitconfig.Config) {
+			assertionError: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+			assertionConfig: func(t *testing.T, c fluentbitconfig.Config) {
 				assert.Len(t, c.Output, 1)
 				o := c.Output[0]
 				assert.Equal(t, o["match"], "audit")
@@ -70,6 +134,8 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			desc: "with changes config config",
 			backend: v1alpha1.AuditBackendS3{
 				Enabled:              true,
+				Bucket:               "bucket",
+				Region:               "region",
 				FilesystemBufferSize: pointer.Pointer("1G"),
 				S3KeyFormat:          pointer.Pointer("/%Y/%m/%d/$UUID"),
 				Prefix:               pointer.Pointer("/logs"),
@@ -79,8 +145,10 @@ func Test_S3FluentBitConfig(t *testing.T) {
 				UseCompression:       pointer.Pointer(true),
 			},
 			secretData: validSecretData,
-			valid:      true,
-			assertion: func(t *testing.T, c fluentbitconfig.Config) {
+			assertionError: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+			assertionConfig: func(t *testing.T, c fluentbitconfig.Config) {
 				assert.Len(t, c.Output, 1)
 				o := c.Output[0]
 				assert.Equal(t, o["store_dir_limit_size"], "1G")
@@ -103,14 +171,11 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			s3, err := NewS3(backends.S3, &corev1.Secret{
 				Data: tc.secretData,
 			})
-			if !tc.valid {
-				assert.Error(t, err)
-				return
+			tc.assertionError(t, err)
+			if err == nil {
+				config := s3.FluentBitConfig(&extensions.Cluster{})
+				tc.assertionConfig(t, config)
 			}
-
-			config := s3.FluentBitConfig(&extensions.Cluster{})
-
-			tc.assertion(t, config)
 		})
 	}
 }
