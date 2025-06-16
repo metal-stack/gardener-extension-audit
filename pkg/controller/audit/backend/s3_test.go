@@ -1,13 +1,15 @@
 package backend
 
 import (
+	"testing"
+
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 	"github.com/metal-stack/gardener-extension-audit/pkg/fluentbitconfig"
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 func Test_S3FluentBitConfig(t *testing.T) {
@@ -31,7 +33,7 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			},
 			secretData: map[string][]byte{},
 			assertionError: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.ErrorContains(t, err, "secret")
 			},
 		},
@@ -43,7 +45,7 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			},
 			secretData: validSecretData,
 			assertionError: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.ErrorContains(t, err, "bucket")
 			},
 		},
@@ -55,7 +57,7 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			},
 			secretData: validSecretData,
 			assertionError: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.ErrorContains(t, err, "region")
 			},
 		},
@@ -69,7 +71,7 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			},
 			secretData: validSecretData,
 			assertionError: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.ErrorContains(t, err, "prefix")
 			},
 		},
@@ -84,7 +86,7 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			},
 			secretData: validSecretData,
 			assertionError: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.ErrorContains(t, err, "s3KeyFormat")
 			},
 		},
@@ -115,18 +117,18 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			assertionConfig: func(t *testing.T, c fluentbitconfig.Config) {
 				assert.Len(t, c.Output, 1)
 				o := c.Output[0]
-				assert.Equal(t, o["match"], "audit")
-				assert.Equal(t, o["name"], "s3")
-				assert.Equal(t, o["retry_limit"], "no_limits")
-				assert.Equal(t, o["store_dir_limit_size"], "900M")
-				assert.Equal(t, o["bucket"], "bucket")
-				assert.Equal(t, o["region"], "region")
-				assert.Equal(t, o["json_date_key"], "timestamp")
-				assert.Equal(t, o["use_put_object"], "On")
-				assert.Equal(t, o["s3_key_format"], "/audit-logs/%Y/%m/%d/%H/%M/%S/$UUID")
-				assert.Equal(t, o["upload_timeout"], "10m")
-				assert.Equal(t, o["total_file_size"], "100M")
-				assert.Equal(t, o["tls"], "On")
+				assert.Equal(t, "audit", o["match"])
+				assert.Equal(t, "s3", o["name"])
+				assert.Equal(t, "no_limits", o["retry_limit"])
+				assert.Equal(t, "900M", o["store_dir_limit_size"])
+				assert.Equal(t, "bucket", o["bucket"])
+				assert.Equal(t, "region", o["region"])
+				assert.Equal(t, "timestamp", o["json_date_key"])
+				assert.Equal(t, "On", o["use_put_object"])
+				assert.Equal(t, "/audit-logs/%Y/%m/%d/%H/%M/%S/$UUID", o["s3_key_format"])
+				assert.Equal(t, "10m", o["upload_timeout"])
+				assert.Equal(t, "100M", o["total_file_size"])
+				assert.Equal(t, "On", o["tls"])
 			},
 		},
 
@@ -151,14 +153,14 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			assertionConfig: func(t *testing.T, c fluentbitconfig.Config) {
 				assert.Len(t, c.Output, 1)
 				o := c.Output[0]
-				assert.Equal(t, o["store_dir_limit_size"], "1G")
-				assert.Equal(t, o["json_date_key"], "timestamp")
-				assert.Equal(t, o["use_put_object"], "On")
-				assert.Equal(t, o["s3_key_format"], "/logs/%Y/%m/%d/$UUID")
-				assert.Equal(t, o["upload_timeout"], "2m")
-				assert.Equal(t, o["total_file_size"], "99M")
-				assert.Equal(t, o["compression"], "gzip")
-				assert.NotEqual(t, o["tls"], "On")
+				assert.Equal(t, "1G", o["store_dir_limit_size"])
+				assert.Equal(t, "timestamp", o["json_date_key"])
+				assert.Equal(t, "On", o["use_put_object"])
+				assert.Equal(t, "/logs/%Y/%m/%d/$UUID", o["s3_key_format"])
+				assert.Equal(t, "2m", o["upload_timeout"])
+				assert.Equal(t, "99M", o["total_file_size"])
+				assert.Equal(t, "gzip", o["compression"])
+				assert.NotEqual(t, "On", o["tls"])
 			},
 		},
 	}
