@@ -33,12 +33,30 @@ spec:
         #   secretResourceName: splunk-secret
         #   tls: true
         #   tlshost: <hostname for splunk host if needed for tls sni|certificate verification>
+        # s3:
+        #   enabled: true
+        #   bucket: "my-audit-logs"
+        #   region: "eu-west-1"
+        #   secretResourceName: s3-secret
+        #   prefix: "cluster-logs"  # optional
+        #   s3KeyFormat: "/%Y/%m/%d/$UUID" # optional
+        #   filesystemBufferSize: "1G"  # optional
+        #   endpoint: "https://custom-s3-endpoint" # optional, for S3-compatible storage
+        #   tlsEnabled: true  # optional
+        #   totalFileSize: "99M" # optional
+        #   uploadTimeout: "1m" # optional
+        #   useCompression: true # optional
   # resources:
   #   - name: splunk-secret
   #     resourceRef:
   #       apiVersion: v1
   #       kind: Secret
   #       name: splunk-secret
+  #   - name: s3-secret
+  #     resourceRef:
+  #       apiVersion: v1
+  #       kind: Secret
+  #       name: s3-secret
   networking:
     type: calico
     nodes: 10.10.0.0/16
