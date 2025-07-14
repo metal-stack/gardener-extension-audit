@@ -450,7 +450,6 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 							"prometheus.io/port":                                      "2020",
 							"prometheus.io/path":                                      "/api/v1/metrics/prometheus",
 							"checksum/secret-" + auditWebhookConfigSecret.Name:        utils.ComputeSecretChecksum(auditWebhookConfigSecret.Data),
-							"checksum/config-" + fluentbitConfigMap.Name:              utils.ComputeConfigMapChecksum(fluentbitConfigMap.Data),
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -609,6 +608,9 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 		fluentbitConfigMap.Data[key] = backend.FluentBitConfig(cluster).Generate()
 		backend.PatchAuditWebhook(auditwebhookStatefulSet)
 	}
+
+	// calculate configmap checksum after all backends are applied
+	auditwebhookStatefulSet.Spec.Template.Annotations["checksum/config-"+fluentbitConfigMap.Name] = utils.ComputeConfigMapChecksum(fluentbitConfigMap.Data)
 
 	return objects, nil
 }
