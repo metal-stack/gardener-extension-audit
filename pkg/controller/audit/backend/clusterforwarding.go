@@ -150,14 +150,6 @@ func (c ClusterForwarding) AdditionalShootObjects(*extensions.Cluster) []client.
 	audittailerServerSecret.ObjectMeta.ResourceVersion = ""
 
 	return []client.Object{
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: v1alpha1.ShootAudittailerNamespace,
-				Labels: map[string]string{
-					"app": "audittailer",
-				},
-			},
-		},
 		audittailerServerSecret,
 		audittailerConfig,
 		&appsv1.Deployment{
