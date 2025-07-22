@@ -9,7 +9,7 @@ const (
 	SeedAuditResourceName  = "extension-audit"
 	ShootAuditResourceName = "extension-audit-shoot"
 
-	ShootAudittailerNamespace = "audit"
+	ShootAudittailerNamespace = "kube-system"
 
 	AuditWebhookModeBatch          AuditWebhookMode = "batch"
 	AuditWebhookModeBlocking       AuditWebhookMode = "blocking"
