@@ -70,6 +70,10 @@ type AuditBackends struct {
 	// +optional
 	Splunk *AuditBackendSplunk `json:"splunk,omitempty"`
 
+	// S3 will store audit logs in an S3 bucket.
+	// +optional
+	S3 *AuditBackendS3 `json:"s3,omitempty"`
+
 	// Possible backends that would be helpful as well:
 	// - Forward
 	// - Loki
@@ -88,6 +92,7 @@ type AuditBackendClusterForwarding struct {
 	Enabled bool `json:"enabled"`
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
+	// +optional
 	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 }
 type AuditBackendSplunk struct {
@@ -95,6 +100,7 @@ type AuditBackendSplunk struct {
 	Enabled bool `json:"enabled"`
 
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
+	// +optional
 	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 
 	// Index is the splunk index that should be used.
@@ -123,4 +129,53 @@ type AuditBackendSplunk struct {
 	// CustomData contains a map of custom key/value pairs. The custom data is added to each audit log entry using fluentbit's modify filter.
 	// The keys and the values may only contain letters, numbers, '_' or '.'. Empty keys or values are also not accepted.
 	CustomData map[string]string `json:"customData,omitempty"`
+}
+
+type AuditBackendS3 struct {
+	// Enabled allows to turn this backend on.
+	Enabled bool `json:"enabled"`
+
+	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
+	// +optional
+	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
+
+	// Bucket is the S3 bucket name where audit logs will be stored.
+	Bucket string `json:"bucket"`
+
+	// Region is the AWS region where the bucket is located.
+	Region string `json:"region"`
+
+	// Prefix is the prefix (folder path) where audit logs will be stored in the bucket. Must start with a /. Defaults to "/audit-logs".
+	// +optional
+	Prefix *string `json:"prefix,omitempty"`
+
+	// S3KeyFormat is the folder structure in which the audit logs will be stored in the bucket. Must start with a /. Defaults to "/%Y/%m/%d/%H/%M/%S/$UUID".
+	// +optional
+	S3KeyFormat *string `json:"s3KeyFormat,omitempty"`
+
+	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against AWS.
+	// The referenced secret must contain:
+	// - access_key_id: Required, AWS access key ID
+	// - secret_access_key: Required, AWS secret access key
+	SecretResourceName string `json:"secretResourceName"`
+
+	// Endpoint is the custom S3 endpoint URL (optional, for S3-compatible storage).
+	// +optional
+	Endpoint *string `json:"endpoint,omitempty"`
+
+	// TlsEnabled determines whether TLS should be used to communicate with S3. Defaults to "true".
+	// +optional
+	TlsEnabled *bool `json:"tlsEnabled,omitempty"`
+
+	// TotalFileSize specify file size in S3. Minimum size is 1M, maximum size is 1G. Defaults to 100M.
+	// +optional
+	TotalFileSize *string `json:"totalFileSize,omitempty"`
+
+	// UploadTimeout specify the amount of time in which the logs are uploaded and creates a new file in S3. Defaults to 10m.
+	// +optional
+	UploadTimeout *string `json:"uploadTimeout,omitempty"`
+
+	// UseCompression enables gzip compression for the S3 objects.
+	// +optional
+	UseCompression *bool `json:"useCompression,omitempty"`
 }
