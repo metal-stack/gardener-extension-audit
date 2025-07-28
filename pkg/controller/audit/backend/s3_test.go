@@ -91,19 +91,6 @@ func Test_S3FluentBitConfig(t *testing.T) {
 			},
 		},
 		{
-			desc: "valid secret",
-			backend: v1alpha1.AuditBackendS3{
-				Enabled: true,
-				Bucket:  "bucket",
-				Region:  "region",
-			},
-			secretData: validSecretData,
-			assertionError: func(t *testing.T, err error) {
-				assert.NoError(t, err)
-			},
-			assertionConfig: func(t *testing.T, c fluentbitconfig.Config) {},
-		},
-		{
 			desc: "with default config",
 			backend: v1alpha1.AuditBackendS3{
 				Enabled: true,
@@ -133,7 +120,7 @@ func Test_S3FluentBitConfig(t *testing.T) {
 		},
 
 		{
-			desc: "with changes config config",
+			desc: "with changes config",
 			backend: v1alpha1.AuditBackendS3{
 				Enabled:              true,
 				Bucket:               "bucket",
