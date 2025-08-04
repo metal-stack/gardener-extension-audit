@@ -6,7 +6,7 @@ images:
 - name: fluent-bit
   sourceRepository: https://github.com/fluent/fluent-bit
   repository: fluent/fluent-bit
-  tag: "2.1.10"
+  tag: "4.0.5"
 - name: audittailer
   sourceRepository: https://github.com/fluent/fluentd
   repository: fluent/fluentd

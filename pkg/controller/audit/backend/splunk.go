@@ -87,6 +87,7 @@ func (s Splunk) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Con
 	if s.backend.TlsEnabled {
 		splunkConfig["tls"] = "on"
 		splunkConfig["tls.verify"] = "on"
+		splunkConfig["tls.verify_hostname"] = "on"
 		if s.backend.TlsHost != "" {
 			splunkConfig["tls.vhost"] = s.backend.TlsHost
 		}
