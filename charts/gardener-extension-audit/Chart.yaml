@@ -3,3 +3,5 @@ appVersion: "1.0"
 description: A Helm chart for the audit extension
 name: gardener-extension-audit
 version: 0.1.0
+sources:
+  - https://github.com/metal-stack/gardener-extension-audit
