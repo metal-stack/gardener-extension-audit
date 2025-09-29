@@ -2,7 +2,7 @@
 
 Provides a Gardener extension for managing kube-apiserver audit logs for a shoot cluster.
 
-The extension spins up a fluentbit-based audit sink in the seed's shoot namespace prior to starting the shoot's API server. Therefore, it is required to run this extension with the reconcile lifecycle policy `BeforeKubeAPIServer`. Also the deletion has to happen `BeforeKubeAPIServer` as otherwise the managed resources of this extension block the shoot deletion flow.
+The extension spins up a fluent-bit-based audit sink in the seed's shoot namespace prior to starting the shoot's API server. Therefore, it is required to run this extension with the reconcile lifecycle policy `BeforeKubeAPIServer`. Also the deletion has to happen `BeforeKubeAPIServer` as otherwise the managed resources of this extension block the shoot deletion flow.
 
 This sink has the ability to buffer audit logs to a persistent volume and send them to the supported backends.
 
@@ -12,9 +12,13 @@ A custom audit policy can be natively configured by Gardener in the shoot spec's
 
 ## Supported Backends
 
-- Log (just logs to the container, only for devel-purposes)
-- Cluster Forwarding (forwards audit logs into a pod in the shoot cluster, should not be used for production purposes)
 - Splunk
+- S3
+- Log (just logs to the container, only for devel-purposes)
+- Cluster Forwarding (forwards audit logs into a pod in the shoot cluster)
+
+> [!IMPORTANT]
+> The Cluster Forwarding backend is mainly intended for showcasing and not for production purposes. It is known not to work with Gardener HA Control Planes and also there were issues reported when using it in combination with the Cilium CNI configured kubeproxyless with Native-Routing (audit entries do not arrive at the `audittailer` pod).
 
 ## Development
 
