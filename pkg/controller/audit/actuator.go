@@ -462,7 +462,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 							"networking.resources.gardener.cloud/to-world-from-ports": `[{"port":2020,"protocol":"TCP"}]`,
 							"prometheus.io/scrape":                                    "true",
 							"prometheus.io/port":                                      "2020",
-							"prometheus.io/path":                                      "/api/v1/metrics/prometheus",
+							"prometheus.io/path":                                      "/api/v2/metrics/prometheus",
 							"checksum/secret-" + auditWebhookConfigSecret.Name:        utils.ComputeSecretChecksum(auditWebhookConfigSecret.Data),
 						},
 					},
@@ -483,7 +483,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 								ReadinessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
-											Path: "/api/v1/metrics/prometheus",
+											Path: "/api/v2/metrics/prometheus",
 											Port: intstr.FromInt(2020),
 										},
 									},
