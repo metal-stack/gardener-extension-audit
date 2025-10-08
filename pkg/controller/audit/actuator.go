@@ -389,6 +389,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 						"storage.checksum":          "off",
 						"storage.max_chunks_up":     "128",
 						"storage.backlog.mem_limit": "5M",
+						"storage.metrics":           "on",
 
 						"scheduler.base": "1",
 						"scheduler.cap":  "60", // try to send records every 60s
