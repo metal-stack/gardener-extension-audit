@@ -410,12 +410,17 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 					},
 				}.Generate(),
 				"null.backend.conf": fluentbitconfig.Config{
-					// the null backend is for the case when no backends are configured and fluentbit will still start up
-					// as when this happens, it will fail because the backend conf include does not match any file
+					// Add a default backend to ensure that the backend conf include can always match some
+					// file. fluentbit will fail to start otherwise if no backend exists. In addition, setting
+					// `storage.pause_on_chunks_overlimit on` does not work unless the "null" backend exists.
+					// At least that is the case when using the "Splunk" backend. Thus, just always add the
+					// null backend to keep output names consistent.
 					Output: []fluentbitconfig.Output{
 						map[string]string{
 							"match": "audit",
 							"name":  "null",
+							// Must set storage size limit as otherwise the size limit for other outputs does not work
+							"storage.total_limit_size": "900M",
 						},
 					},
 				}.Generate(),
