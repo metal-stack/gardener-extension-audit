@@ -369,6 +369,16 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 		return nil, fmt.Errorf("unable to generate webhook kubeconfig: %w", err)
 	}
 
+	pauseInputOnOverLimit := "off"
+	if auditConfig.WebhookMode == v1alpha1.AuditWebhookModeBlockingStrict {
+		// When using mode `blocking-strict` make sure to never drop audit logs without the
+		// knowledge of the kube-apiserver. Setting `storage.pause_on_chunks_overlimit`` prevents
+		// ingesting new audit logs, however, this already happens once the in-memory buffer
+		// controlled by storage.max_chunks_up has filled up. Thus, the limit on the amount of
+		// logs is roughly `storage.max_chunks_up` * 2MB (the default chunk size).
+		pauseInputOnOverLimit = "on"
+	}
+
 	var (
 		fluentbitConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -402,7 +412,9 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 					Input: []fluentbitconfig.Input{
 						map[string]string{
 							"storage.type": "filesystem",
-							"name":         "http",
+							// only works when the "null" backend below also exists
+							"storage.pause_on_chunks_overlimit": pauseInputOnOverLimit,
+							"name":                              "http",
 						},
 					},
 					Includes: []fluentbitconfig.Include{
