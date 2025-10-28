@@ -369,8 +369,16 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 		return nil, fmt.Errorf("unable to generate webhook kubeconfig: %w", err)
 	}
 
+	var webhookMode v1alpha1.AuditWebhookMode
+	switch mode := auditConfig.WebhookMode; mode {
+	case v1alpha1.AuditWebhookModeBatch, v1alpha1.AuditWebhookModeBlocking, v1alpha1.AuditWebhookModeBlockingStrict:
+		webhookMode = mode
+	default:
+		webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+	}
+
 	pauseInputOnOverLimit := "off"
-	if auditConfig.WebhookMode == v1alpha1.AuditWebhookModeBlockingStrict {
+	if webhookMode == v1alpha1.AuditWebhookModeBlockingStrict {
 		// When using mode `blocking-strict` make sure to never drop audit logs without the
 		// knowledge of the kube-apiserver. Setting `storage.pause_on_chunks_overlimit`` prevents
 		// ingesting new audit logs, however, this already happens once the in-memory buffer
