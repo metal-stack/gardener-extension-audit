@@ -405,7 +405,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 						"storage.path":              "/data/",
 						"storage.sync":              "normal",
 						"storage.checksum":          "off",
-						"storage.max_chunks_up":     "128",
+						"storage.max_chunks_up":     "450", // default chunk size is 2MB, stay within the storage size limit of 900MB
 						"storage.backlog.mem_limit": "5M",
 						"storage.metrics":           "on",
 
