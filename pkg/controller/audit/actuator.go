@@ -439,7 +439,9 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 						map[string]string{
 							"match": "audit",
 							"name":  "null",
-							// Must set storage size limit as otherwise the size limit for other outputs does not work
+							// Must set storage size limit as otherwise the size limit for other outputs does not work.
+							// Should match the size limit of the other backends to ensure that fluentbit does not drop
+							// old logs after pausing on overlimit followed by a pod restart.
 							"storage.total_limit_size": "900M",
 						},
 					},
