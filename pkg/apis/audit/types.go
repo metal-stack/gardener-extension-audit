@@ -28,7 +28,11 @@ type AuditConfig struct {
 	// Replicas are the amount of replicas used for the buffering audit pods.
 	Replicas *int32
 
-	// WebhookMode allows to select which auditing mode - batching or blocking - should be used.
+	// WebhookMode allows to select which auditing mode - batch, blocking or blocking-strict - should be used.
+	// The modes batch and blocking configure fluentbit such that audit log messages may be dropped if the
+	// audit log backend cannot ingest them in time. Fluenbit buffers up to 900MB in these modes.
+	// The mode blocking-strict instead causes all kube-apiserver requests to fail in this case. Fluentbit
+	// buffers up to storage.max_chunks_up * 2M (roughly 256MB) in this mode.
 	WebhookMode AuditWebhookMode
 
 	// Backends contains the settings for the various backends.

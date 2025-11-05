@@ -369,6 +369,24 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 		return nil, fmt.Errorf("unable to generate webhook kubeconfig: %w", err)
 	}
 
+	var webhookMode v1alpha1.AuditWebhookMode
+	switch mode := auditConfig.WebhookMode; mode {
+	case v1alpha1.AuditWebhookModeBatch, v1alpha1.AuditWebhookModeBlocking, v1alpha1.AuditWebhookModeBlockingStrict:
+		webhookMode = mode
+	default:
+		webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+	}
+
+	pauseInputOnOverLimit := "off"
+	if webhookMode == v1alpha1.AuditWebhookModeBlockingStrict {
+		// When using mode `blocking-strict` make sure to never drop audit logs without the
+		// knowledge of the kube-apiserver. Setting `storage.pause_on_chunks_overlimit`` prevents
+		// ingesting new audit logs, however, this already happens once the in-memory buffer
+		// controlled by storage.max_chunks_up has filled up. Thus, the limit on the amount of
+		// logs is roughly `storage.max_chunks_up` * 2MB (the default chunk size).
+		pauseInputOnOverLimit = "on"
+	}
+
 	var (
 		fluentbitConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -387,7 +405,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 						"storage.path":              "/data/",
 						"storage.sync":              "normal",
 						"storage.checksum":          "off",
-						"storage.max_chunks_up":     "128",
+						"storage.max_chunks_up":     "450", // default chunk size is 2MB, stay within the storage size limit of 900MB
 						"storage.backlog.mem_limit": "5M",
 						"storage.metrics":           "on",
 
@@ -402,7 +420,9 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 					Input: []fluentbitconfig.Input{
 						map[string]string{
 							"storage.type": "filesystem",
-							"name":         "http",
+							// only works when the "null" backend below also exists
+							"storage.pause_on_chunks_overlimit": pauseInputOnOverLimit,
+							"name":                              "http",
 						},
 					},
 					Includes: []fluentbitconfig.Include{
@@ -410,12 +430,19 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 					},
 				}.Generate(),
 				"null.backend.conf": fluentbitconfig.Config{
-					// the null backend is for the case when no backends are configured and fluentbit will still start up
-					// as when this happens, it will fail because the backend conf include does not match any file
+					// Add a default backend to ensure that the backend conf include can always match some
+					// file. fluentbit will fail to start otherwise if no backend exists. In addition, setting
+					// `storage.pause_on_chunks_overlimit on` does not work unless the "null" backend exists.
+					// At least that is the case when using the "Splunk" backend. Thus, just always add the
+					// null backend to keep output names consistent.
 					Output: []fluentbitconfig.Output{
 						map[string]string{
 							"match": "audit",
 							"name":  "null",
+							// Must set storage size limit as otherwise the size limit for other outputs does not work.
+							// Should match the size limit of the other backends to ensure that fluentbit does not drop
+							// old logs after pausing on overlimit followed by a pod restart.
+							"storage.total_limit_size": "900M",
 						},
 					},
 				}.Generate(),
