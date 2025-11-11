@@ -80,6 +80,10 @@ type AuditBackends struct {
 	// S3 will store audit logs in an S3 bucket.
 	// +optional
 	S3 *AuditBackendS3 `json:"s3,omitempty"`
+	
+	// CustomForwarding will forward the audit data to a custom endpoint.
+	// +optional
+	CustomForwarding *AuditBackendCustomForwarding `json:"customForwarding,omitempty"`
 
 	// Possible backends that would be helpful as well:
 	// - Forward
@@ -185,4 +189,12 @@ type AuditBackendS3 struct {
 	// UseCompression enables gzip compression for the S3 objects.
 	// +optional
 	UseCompression *bool `json:"useCompression,omitempty"`
+}
+
+type AuditBackendCustomForwarding struct {
+	// Enabled allows to turn this backend on.
+	Enabled bool `json:"enabled"`
+
+	// OutConfigMapResourceName is a reference under Shoot.spec.resources to the config map used to configure the custom forwarding backend.
+	OutConfigMapResourceName string `json:"outConfigMapResourceName"`
 }

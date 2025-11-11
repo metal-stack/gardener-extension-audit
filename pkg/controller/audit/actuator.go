@@ -161,6 +161,20 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 
 		backendMap["s3"] = s3Backend
 	}
+	
+	if pointer.SafeDeref(backends.CustomForwarding).Enabled {
+		outputConfig, err := a.findBackendConfigMap(ctx, cluster, backends.CustomForwarding.OutConfigMapResourceName)
+		if err != nil {
+			return nil, err
+		}
+
+		customForwardingBackend, err := backend.NewCustomForwarding(outputConfig)
+		if err != nil {
+			return nil, fmt.Errorf("error creating custom-forwarding backend: %w", err)
+		}
+
+		backendMap["custom-forwarding"] = customForwardingBackend
+	}
 
 	return backendMap, nil
 }
@@ -214,6 +228,10 @@ func (a *actuator) applyDefaultBackends(ctx context.Context, log logr.Logger, ba
 		if err != nil {
 			return defaultedBackends, secrets, err
 		}
+	}
+	if a.config.DefaultBackends.CustomForwarding != nil && backends.CustomForwarding == nil {
+		log.Info(`configuring default backend "custom forwarding"`)
+		defaultedBackends.CustomForwarding = a.config.DefaultBackends.CustomForwarding
 	}
 
 	v1alpha1.DefaultBackends(defaultedBackends)
@@ -743,4 +761,28 @@ func getReplicas(cluster *extensions.Cluster, wokenUp *int32) *int32 {
 	}
 
 	return wokenUp
+}
+
+func (a *actuator) findBackendConfigMap(ctx context.Context, cluster *extensions.Cluster, configMapName string) (*corev1.ConfigMap, error) {
+	fromShootResources := func() (*corev1.ConfigMap, error) {
+		configMapRef := helper.GetResourceByName(cluster.Shoot.Spec.Resources, configMapName)
+		if configMapRef == nil {
+			return nil, nil
+		}
+
+		configMap := &corev1.ConfigMap{}
+		err := controller.GetObjectByReference(ctx, a.client, &configMapRef.ResourceRef, cluster.ObjectMeta.Name, configMap)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get referenced config map: %w", err)
+		}
+
+		return configMap, nil
+	}
+
+	configMap, err := fromShootResources()
+	if err != nil {
+		return nil, err
+	}
+
+	return configMap, nil
 }
