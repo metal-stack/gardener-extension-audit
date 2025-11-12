@@ -16,22 +16,38 @@ type CustomForwarding struct{
 }
 
 func NewCustomForwarding(outputConfig *corev1.ConfigMap) (CustomForwarding, error) {
-	config, err := validateCustomForwardingConfig(outputConfig)
-	if err != nil {
-		return CustomForwarding{}, err
-	}
+	configString, ok := outputConfig.Data["fluent-bit-output.conf"]
+    if !ok {
+        return CustomForwarding{}, fmt.Errorf("missing 'fluent-bit-output.conf' key in ConfigMap")
+    }
+    
+    config, err := parseFluentBitOutput(configString)
+    if err != nil {
+        return CustomForwarding{}, fmt.Errorf("failed to parse fluent-bit output config: %w", err)
+    }
 
 	return CustomForwarding{outputConfig: config}, nil
 }
 
-func validateCustomForwardingConfig(outputConfig *corev1.ConfigMap) (map[string]string, error) {
-	conf := outputConfig.Data["fluent-bit-output.conf"]
-	
-	lines := strings.Split(conf, "\n")
+func parseFluentBitOutput(config string) (map[string]string, error) {	
+	lines := strings.Split(config, "\n")
 
-	if len(lines) == 0 || !strings.Contains(lines[0], "[OUTPUT]")  {
-		return nil, fmt.Errorf("no valid configuration found")
+	if len(lines) == 1 && lines[0] == "" {
+		return nil, fmt.Errorf("empty configuration")
 	}
+	
+	// Find [OUTPUT] section
+    hasOutputSection := false
+    for _, line := range lines {
+        if strings.Contains(strings.TrimSpace(line), "[OUTPUT]") {
+            hasOutputSection = true
+            break
+        }
+    }
+    
+    if !hasOutputSection {
+        return nil, fmt.Errorf("missing [OUTPUT] section in configuration")
+    }
 
 	result := make(map[string]string)
 	for _, line := range lines {
@@ -49,6 +65,10 @@ func validateCustomForwardingConfig(outputConfig *corev1.ConfigMap) (map[string]
 			result[key] = value
 		}
 	}
+	
+	if len(result) == 0 {
+        return nil, fmt.Errorf("no valid key-value pairs found in configuration")
+    }
 	
 	return result, nil
 }
