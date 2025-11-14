@@ -161,7 +161,7 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 
 		backendMap["s3"] = s3Backend
 	}
-	
+
 	if pointer.SafeDeref(backends.CustomForwarding).Enabled {
 		outputConfig, err := a.findBackendConfigMap(ctx, cluster, backends.CustomForwarding.OutConfigMapResourceName)
 		if err != nil {
@@ -263,6 +263,13 @@ func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditCo
 	for _, backend := range backends {
 		shootObjects = append(shootObjects, backend.AdditionalShootObjects(cluster)...)
 	}
+
+	// TODO(charleenklang): remove after testing
+	fluentBitImage, err := imagevector.ImageVector().FindImage("fluent-bit")
+	if err != nil {
+		return fmt.Errorf("failed to find fluent-bit image: %w", err)
+	}
+	log.Info("found fluent-bit image", "image", fluentBitImage.String())
 
 	seedObjects, err := seedObjects(auditConfig, cluster, backends, namespace)
 	if err != nil {

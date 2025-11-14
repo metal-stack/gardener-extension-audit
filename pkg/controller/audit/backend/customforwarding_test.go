@@ -14,7 +14,7 @@ func Test_parseFluentBitOutput(t *testing.T) {
 		assertionError func(*testing.T, error)
 	}{
 		{
-			desc: "valid output config",
+			desc: "valid output config s3",
 			input: `[OUTPUT]
 				Name  s3
 				Match *
@@ -25,6 +25,21 @@ func Test_parseFluentBitOutput(t *testing.T) {
 				"Match":  "*",
 				"bucket": "my-bucket",
 				"region": "us-west-2",
+			},
+			assertionError: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			desc: "valid output config loki",
+			input: `[OUTPUT]
+			    name   loki
+			    match  *
+			    labels job=fluentbit, $sub['stream']`,
+			expected: map[string]string{
+				"name":       "loki",
+				"match":      "*",
+				"labels":     "job=fluentbit, $sub['stream']",
 			},
 			assertionError: func(t *testing.T, err error) {
 				assert.NoError(t, err)
@@ -43,8 +58,8 @@ func Test_parseFluentBitOutput(t *testing.T) {
 			},
 		},
 		{
-			desc: "empty configuration",
-			input: ``,
+			desc:     "empty configuration",
+			input:    ``,
 			expected: nil,
 			assertionError: func(t *testing.T, err error) {
 				assert.Error(t, err)
