@@ -163,12 +163,17 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 	}
 
 	if pointer.SafeDeref(backends.CustomForwarding).Enabled {
-		outputConfig, err := a.findBackendConfigMap(ctx, cluster, backends.CustomForwarding.OutConfigMapResourceName)
+		outputConfig, err := a.findBackendConfigMap(ctx, cluster, backends.CustomForwarding.ConfigMapResourceName)
+		if err != nil {
+			return nil, err
+		}
+		
+		customSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.CustomForwarding.SecretResourceName)
 		if err != nil {
 			return nil, err
 		}
 
-		customForwardingBackend, err := backend.NewCustomForwarding(outputConfig)
+		customForwardingBackend, err := backend.NewCustomForwarding(outputConfig, customSecret)
 		if err != nil {
 			return nil, fmt.Errorf("error creating custom-forwarding backend: %w", err)
 		}

@@ -168,6 +168,15 @@ type AuditBackendCustomForwarding struct {
 	// Enabled allows to turn this backend on.
 	Enabled bool
 
-	// OutConfigMapResourceName is a reference under Shoot.spec.resources to the config map used to configure the custom forwarding backend.
-	OutConfigMapResourceName string
+	// ConfigMapResourceName is a reference under Shoot.spec.resources to the config map used to configure the custom forwarding backend.
+	ConfigMapResourceName string
+	
+	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the custom forwarding backend.
+	//
+	// The referenced secret may contain the following keys:
+	//
+	// - ca.crt: Optional, CA used to validate the server certificate.
+	// - tls.key: Optional, client private key (only for mTLS).
+	// - tls.crt: Optional, client certificate (only for mTLS).
+	SecretResourceName string
 }

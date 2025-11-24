@@ -46,6 +46,23 @@ func Test_parseFluentBitOutput(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid output config with comments",
+			input: `[OUTPUT]
+			    # this is a comment in a new line
+			    name   loki
+			    match  * # this is a comment inline
+			    labels job=fluentbit, $sub['stream']`,
+			expected: map[string]string{
+				"#": "this is a comment in a new line",
+				"name":       "loki",
+				"match":      "* # this is a comment inline",
+				"labels":     "job=fluentbit, $sub['stream']",
+			},
+			assertionError: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
 			desc: "missing OUTPUT section",
 			input: `Name  s3
 				Match *
