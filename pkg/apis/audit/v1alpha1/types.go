@@ -209,5 +209,5 @@ type AuditBackendCustomForwarding struct {
 	// - ca.crt: Optional, CA used to validate the server certificate.
 	// - tls.key: Optional, client private key (only for mTLS).
 	// - tls.crt: Optional, client certificate (only for mTLS).
-	SecretResourceName string `json:"secretResourceName"`
+	SecretResourceName string `json:"secretResourceName,omitempty"`
 }
