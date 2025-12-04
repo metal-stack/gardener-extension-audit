@@ -423,6 +423,8 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 							// only works when the "null" backend below also exists
 							"storage.pause_on_chunks_overlimit": pauseInputOnOverLimit,
 							"name":                              "http",
+							// buffer size must be coordinated with `ensureKubeAPIServerCommandLineArgs` in `pkg/webhook/kapiserver/ensurer.go`
+							"buffer_max_size": "4M",
 						},
 					},
 					Includes: []fluentbitconfig.Include{
