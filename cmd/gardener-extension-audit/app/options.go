@@ -15,7 +15,7 @@ const ExtensionName = "extension-audit"
 // Options holds configuration passed to the registry service controller.
 type Options struct {
 	generalOptions     *controllercmd.GeneralOptions
-	auditOptions       *auditcmd.AuthOptions
+	auditOptions       *auditcmd.AuditOptions
 	restOptions        *controllercmd.RESTOptions
 	managerOptions     *controllercmd.ManagerOptions
 	controllerOptions  *controllercmd.ControllerOptions
@@ -45,7 +45,7 @@ func NewOptions() *Options {
 
 	options := &Options{
 		generalOptions: &controllercmd.GeneralOptions{},
-		auditOptions:   &auditcmd.AuthOptions{},
+		auditOptions:   &auditcmd.AuditOptions{},
 		restOptions:    &controllercmd.RESTOptions{},
 		managerOptions: &controllercmd.ManagerOptions{
 			// These are default values.

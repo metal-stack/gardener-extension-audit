@@ -280,7 +280,7 @@ func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditCo
 }
 
 func (a *actuator) deleteResources(ctx context.Context, log logr.Logger, namespace string) error {
-	log.Info("deleting managed resource for registry cache")
+	log.Info("deleting managed resources for auditing (shoot and seed)")
 
 	if err := managedresources.Delete(ctx, a.client, namespace, v1alpha1.ShootAuditResourceName, false); err != nil {
 		return err

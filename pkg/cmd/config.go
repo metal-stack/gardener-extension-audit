@@ -27,19 +27,19 @@ func init() {
 	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 }
 
-// RegistryOptions holds options related to the registry service.
-type AuthOptions struct {
+// AuditOptions holds options related to the audit service.
+type AuditOptions struct {
 	ConfigLocation string
-	config         *AuthServiceConfig
+	config         *AuditServiceConfig
 }
 
 // AddFlags implements Flagger.AddFlags.
-func (o *AuthOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.ConfigLocation, "config", "", "Path to registry service configuration")
+func (o *AuditOptions) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&o.ConfigLocation, "config", "", "Path to audit configuration")
 }
 
 // Complete implements Completer.Complete.
-func (o *AuthOptions) Complete() error {
+func (o *AuditOptions) Complete() error {
 	if o.ConfigLocation == "" {
 		return errors.New("config location is not set")
 	}
@@ -58,30 +58,30 @@ func (o *AuthOptions) Complete() error {
 	// 	return errs.ToAggregate()
 	// }
 
-	o.config = &AuthServiceConfig{
+	o.config = &AuditServiceConfig{
 		config: config,
 	}
 
 	return nil
 }
 
-// Completed returns the decoded RegistryServiceConfiguration instance. Only call this if `Complete` was successful.
-func (o *AuthOptions) Completed() *AuthServiceConfig {
+// Completed returns the decoded AuditServiceConfig instance. Only call this if `Complete` was successful.
+func (o *AuditOptions) Completed() *AuditServiceConfig {
 	return o.config
 }
 
-// RegistryServiceConfig contains configuration information about the registry service.
-type AuthServiceConfig struct {
+// AuditServiceConfig contains configuration information about the audit service.
+type AuditServiceConfig struct {
 	config configapi.ControllerConfiguration
 }
 
-// Apply applies the RegistryOptions to the passed ControllerOptions instance.
-func (c *AuthServiceConfig) Apply(config *configapi.ControllerConfiguration) {
+// Apply applies the AuditOptions to the passed ControllerOptions instance.
+func (c *AuditServiceConfig) Apply(config *configapi.ControllerConfiguration) {
 	*config = c.config
 }
 
 // ApplyHealthCheckConfig applies the HealthCheckConfig.
-func (c *AuthServiceConfig) ApplyHealthCheckConfig(config *healthcheckconfigv1alpha1.HealthCheckConfig) {
+func (c *AuditServiceConfig) ApplyHealthCheckConfig(config *healthcheckconfigv1alpha1.HealthCheckConfig) {
 	if c.config.HealthCheckConfig != nil {
 		*config = *c.config.HealthCheckConfig
 	}
