@@ -115,4 +115,18 @@ func ensureVolumes(ps *corev1.PodSpec) {
 func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha1.AuditWebhookMode) {
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-config-file=", "/etc/audit-webhook/config/audit-webhook-config.yaml")
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-mode=", string(webhookMode))
+
+	// Configure log truncation to prevent dropped audit log messages
+	// https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#truncate
+	// fluentbit imposes a size limit determined by the buffer used by the http input.
+	// Use a size limit slightly below the limit imposed by fluentbit.
+	// The max-batch-size let's the kube-api-server split audit event batches once
+	// they reach that size. If an individual event exceeds the max-event-size, then
+	// the request and response object are dropped. The request metadata and objectRef
+	// are still kept. As etcd defaults to a maximum request size of 1.5MB, the overall
+	// audit log entry should stay below that limit as well.
+	sizeLimit := fmt.Sprintf("%v", 4*1000*1000-25*1000)
+	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-enabled=", "true")
+	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-batch-size=", sizeLimit)
+	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-event-size=", sizeLimit)
 }
