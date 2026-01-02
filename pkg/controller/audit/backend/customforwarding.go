@@ -3,7 +3,6 @@ package backend
 import (
 	"fmt"
 	"maps"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -17,7 +16,7 @@ import (
 )
 
 const (
-	customCertsFilePath = "/backends/custom/certs"
+	customCertsFilePath = "/certs"
 	customSecretName    = "output-secret"
 )
 
@@ -123,7 +122,8 @@ func (c CustomForwarding) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 	for _, key := range []string{v1alpha1.SecretCaFileKey, v1alpha1.SecretTLSPrivateKey, v1alpha1.SecretTLSCertKey} {
 		if _, exists := c.secret.Data[key]; exists {
 			items = append(items, corev1.KeyToPath{
-				Key: key,
+				Key:  key,
+				Path: key,
 			})
 		}
 	}
@@ -141,7 +141,7 @@ func (c CustomForwarding) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      customSecretName,
-			MountPath: path.Dir(customCertsFilePath),
+			MountPath: customCertsFilePath,
 		})
 
 		sts.Spec.Template.ObjectMeta.Annotations["checksum/"+customSecretName] = utils.ComputeSecretChecksum(c.secret.Data)
