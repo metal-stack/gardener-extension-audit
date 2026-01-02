@@ -167,15 +167,19 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 		if err != nil {
 			return nil, err
 		}
-		
-		customSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.CustomForwarding.SecretResourceName)
-		if err != nil {
-			return nil, err
-		}
 
-		customForwardingBackend, err := backend.NewCustomForwarding(outputConfig, customSecret)
+		customForwardingBackend, err := backend.NewCustomForwarding(outputConfig)
 		if err != nil {
 			return nil, fmt.Errorf("error creating custom-forwarding backend: %w", err)
+		}
+		
+		// when ssl is used, we expect the certs to be provided for fluentbit pod via a secret
+		if backends.CustomForwarding.SecretResourceName != "" {
+			customSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.CustomForwarding.SecretResourceName)
+			if err != nil {
+				return nil, err
+			}
+			customForwardingBackend.SetSecret(customSecret)
 		}
 
 		backendMap["custom-forwarding"] = customForwardingBackend
