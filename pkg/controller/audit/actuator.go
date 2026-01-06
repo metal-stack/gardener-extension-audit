@@ -172,7 +172,7 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 		if err != nil {
 			return nil, fmt.Errorf("error creating custom-forwarding backend: %w", err)
 		}
-		
+
 		// when ssl is used, we expect the certs to be provided for fluentbit pod via a secret
 		if backends.CustomForwarding.SecretResourceName != "" {
 			customSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.CustomForwarding.SecretResourceName)
@@ -272,13 +272,6 @@ func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditCo
 	for _, backend := range backends {
 		shootObjects = append(shootObjects, backend.AdditionalShootObjects(cluster)...)
 	}
-
-	// TODO(charleenklang): remove after testing
-	fluentBitImage, err := imagevector.ImageVector().FindImage("fluent-bit")
-	if err != nil {
-		return fmt.Errorf("failed to find fluent-bit image: %w", err)
-	}
-	log.Info("found fluent-bit image", "image", fluentBitImage.String())
 
 	seedObjects, err := seedObjects(auditConfig, cluster, backends, namespace)
 	if err != nil {

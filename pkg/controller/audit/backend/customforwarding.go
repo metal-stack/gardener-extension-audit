@@ -1,6 +1,8 @@
 package backend
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"maps"
 	"path/filepath"
@@ -87,6 +89,41 @@ func parseFluentBitOutput(config string) (map[string]string, error) {
 	return result, nil
 }
 
+// isValidCertificate checks if the provided data contains a valid PEM-encoded certificate
+func isValidCertificate(data []byte) bool {
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return false
+	}
+	if block.Type != "CERTIFICATE" {
+		return false
+	}
+	_, err := x509.ParseCertificate(block.Bytes)
+	return err == nil
+}
+
+// isValidPrivateKey checks if the provided data contains a valid PEM-encoded private key
+func isValidPrivateKey(data []byte) bool {
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return false
+	}
+	// Check for common private key types
+	switch block.Type {
+	case "RSA PRIVATE KEY":
+		_, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		return err == nil
+	case "EC PRIVATE KEY":
+		_, err := x509.ParseECPrivateKey(block.Bytes)
+		return err == nil
+	case "PRIVATE KEY":
+		_, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		return err == nil
+	default:
+		return false
+	}
+}
+
 func (c CustomForwarding) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
 	customConfig := maps.Clone(c.outputConfig)
 
@@ -120,7 +157,22 @@ func (c CustomForwarding) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 	// don't allow mounting anything else from the secret.
 	var items []corev1.KeyToPath
 	for _, key := range []string{v1alpha1.SecretCaFileKey, v1alpha1.SecretTLSPrivateKey, v1alpha1.SecretTLSCertKey} {
-		if _, exists := c.secret.Data[key]; exists {
+		data, exists := c.secret.Data[key]
+		if !exists {
+			continue
+		}
+
+		// Validate the content based on the key type
+		var valid bool
+		switch key {
+		case v1alpha1.SecretCaFileKey, v1alpha1.SecretTLSCertKey:
+			valid = isValidCertificate(data)
+		case v1alpha1.SecretTLSPrivateKey:
+			valid = isValidPrivateKey(data)
+		}
+
+		// Only mount if validation passed
+		if valid {
 			items = append(items, corev1.KeyToPath{
 				Key:  key,
 				Path: key,
