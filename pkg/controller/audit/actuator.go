@@ -782,7 +782,7 @@ func (a *actuator) findBackendConfigMap(ctx context.Context, cluster *extensions
 		configMap := &corev1.ConfigMap{}
 		err := controller.GetObjectByReference(ctx, a.client, &configMapRef.ResourceRef, cluster.ObjectMeta.Name, configMap)
 		if err != nil {
-			return nil, fmt.Errorf("unable to get referenced config map: %w", err)
+			return nil, fmt.Errorf("unable to get referenced configmap: %w", err)
 		}
 
 		return configMap, nil
@@ -791,6 +791,10 @@ func (a *actuator) findBackendConfigMap(ctx context.Context, cluster *extensions
 	configMap, err := fromShootResources()
 	if err != nil {
 		return nil, err
+	}
+	
+	if configMap == nil {
+		return nil, fmt.Errorf("configmap resource with name %q not found in shoot resources", configMapName)
 	}
 
 	return configMap, nil

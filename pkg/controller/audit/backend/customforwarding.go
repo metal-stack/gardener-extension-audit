@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	customCertsFilePath = "/certs"
+	customCertsFilePath = "/backends/custom-forwarding/certs"
 	customSecretName    = "output-secret"
 )
 
@@ -129,15 +129,15 @@ func (c CustomForwarding) FluentBitConfig(*extensions.Cluster) fluentbitconfig.C
 
 	if c.secret != nil && c.secret.Data != nil {
 		if _, ok := c.secret.Data[v1alpha1.SecretCaFileKey]; ok {
-			customConfig["tls.ca_file"] = filepath.Join(customCertsFilePath, "ca.crt")
+			customConfig["tls.ca_file"] = filepath.Join(customCertsFilePath, v1alpha1.SecretCaFileKey)
 		}
 
 		if _, ok := c.secret.Data[v1alpha1.SecretTLSPrivateKey]; ok {
-			customConfig["tls.key_file"] = filepath.Join(customCertsFilePath, "tls.key")
+			customConfig["tls.key_file"] = filepath.Join(customCertsFilePath, v1alpha1.SecretTLSPrivateKey)
 		}
 
 		if _, ok := c.secret.Data[v1alpha1.SecretTLSCertKey]; ok {
-			customConfig["tls.cert_file"] = filepath.Join(customCertsFilePath, "tls.crt")
+			customConfig["tls.crt_file"] = filepath.Join(customCertsFilePath, v1alpha1.SecretTLSCertKey)
 		}
 	}
 
