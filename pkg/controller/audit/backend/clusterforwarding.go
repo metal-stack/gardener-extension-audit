@@ -169,7 +169,8 @@ func (c ClusterForwarding) AdditionalShootObjects(*extensions.Cluster) []client.
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							"app": "audittailer",
+							"app":                                 "audittailer",
+							"networking.gardener.cloud/from-seed": "allowed",
 						},
 						Annotations: map[string]string{
 							"checksum/secret-audittailer-server":        utils.ComputeSecretChecksum(c.auditTailerServerSecret.Data),
