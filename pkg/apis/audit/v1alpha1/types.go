@@ -17,6 +17,9 @@ const (
 
 	SplunkSecretTokenKey  = "token"
 	SplunkSecretCaFileKey = "ca"
+
+	S3SecretAccessKeyIDKey     = "access_key_id"
+	S3SecretSecretAccessKeyKey = "secret_access_key"
 )
 
 type (
