@@ -9,6 +9,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 	"github.com/metal-stack/gardener-extension-audit/pkg/controller/audit"
+	"github.com/metal-stack/metal-lib/pkg/pointer"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	"github.com/go-logr/logr"
@@ -77,6 +78,18 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 		webhookMode = mode
 	default:
 		webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+	}
+
+	if auditConfig.Backends != nil {
+		if pointer.SafeDeref(auditConfig.Backends.ClusterForwarding).Enabled && webhookMode == v1alpha1.AuditWebhookModeBlockingStrict {
+			// `blocking-strict` in combination with cluster-forwarding can lead to an unpleasant
+			// deadlock from which the kube-apiserver cannot recover: when the kube-apiserver starts
+			// blocking, the gateway-forwarder cannot figure out the destination service
+			// in the shoot anymore. (#68)
+			// TODO: prevent this configuration through admission webhook.
+			webhookMode = v1alpha1.AuditWebhookModeBlocking
+			e.logger.Info("changing `blocking-strict` to `blocking` because `blocking-strict` can lead to a deadlock in combination with cluster-forwarding backend enabled")
+		}
 	}
 
 	template := &new.Spec.Template
