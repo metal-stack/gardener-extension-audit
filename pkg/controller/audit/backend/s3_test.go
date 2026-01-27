@@ -14,8 +14,8 @@ import (
 
 func Test_S3FluentBitConfig(t *testing.T) {
 	validSecretData := map[string][]byte{
-		s3SecretAccessKeyIDKey:     []byte("key"),
-		s3SecretSecretAccessKeyKey: []byte("secret"),
+		v1alpha1.S3SecretAccessKeyIDKey:     []byte("key"),
+		v1alpha1.S3SecretSecretAccessKeyKey: []byte("secret"),
 	}
 	tt := []struct {
 		desc            string

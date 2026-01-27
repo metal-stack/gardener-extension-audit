@@ -14,11 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	s3SecretAccessKeyIDKey     = "access_key_id"
-	s3SecretSecretAccessKeyKey = "secret_access_key"
-)
-
 type S3 struct {
 	backend *v1alpha1.AuditBackendS3
 	secret  *corev1.Secret
@@ -58,12 +53,12 @@ func validateS3Backend(backend *v1alpha1.AuditBackendS3) error {
 }
 
 func validateS3Secret(secret *corev1.Secret) error {
-	if _, ok := secret.Data[s3SecretAccessKeyIDKey]; !ok {
-		return fmt.Errorf("referenced S3 secret does not contain %q", s3SecretAccessKeyIDKey)
+	if _, ok := secret.Data[v1alpha1.S3SecretAccessKeyIDKey]; !ok {
+		return fmt.Errorf("referenced S3 secret does not contain %q", v1alpha1.S3SecretAccessKeyIDKey)
 	}
 
-	if _, ok := secret.Data[s3SecretSecretAccessKeyKey]; !ok {
-		return fmt.Errorf("referenced S3 secret does not contain %q", s3SecretSecretAccessKeyKey)
+	if _, ok := secret.Data[v1alpha1.S3SecretSecretAccessKeyKey]; !ok {
+		return fmt.Errorf("referenced S3 secret does not contain %q", v1alpha1.S3SecretSecretAccessKeyKey)
 	}
 	return nil
 }
@@ -124,7 +119,7 @@ func (s S3) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: s.secret.Name,
 					},
-					Key: s3SecretAccessKeyIDKey,
+					Key: v1alpha1.S3SecretAccessKeyIDKey,
 				},
 			},
 		},
@@ -135,7 +130,7 @@ func (s S3) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: s.secret.Name,
 					},
-					Key: s3SecretSecretAccessKeyKey,
+					Key: v1alpha1.S3SecretSecretAccessKeyKey,
 				},
 			},
 		},
