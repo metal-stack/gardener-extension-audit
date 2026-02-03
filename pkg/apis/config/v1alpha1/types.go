@@ -19,4 +19,9 @@ type ControllerConfiguration struct {
 	// HealthCheckConfig is the config for the health check controller
 	// +optional
 	HealthCheckConfig *healthcheckconfigv1alpha1.HealthCheckConfig `json:"healthCheckConfig,omitempty"`
+	
+	// AllowCustomBackends controls whether users are allowed to configure custom audit backends.
+	// If set to false, custom forwarding backends will be rejected during validation.
+	// +optional
+	AllowCustomBackends *bool `json:"allowCustomBackends,omitempty"`
 }

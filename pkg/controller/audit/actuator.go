@@ -70,6 +70,10 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		}
 	}
 
+	if err := a.validateCustomBackends(auditConfig.Backends); err != nil {
+		return err
+	}
+
 	backends, defaultBackendSecrets, err := a.applyDefaultBackends(ctx, log, auditConfig.Backends)
 	if err != nil {
 		log.Error(err, "unable to apply default backends configured by operator, continuing anyway but configuration of this extension needs to be checked")
@@ -238,7 +242,10 @@ func (a *actuator) applyDefaultBackends(ctx context.Context, log logr.Logger, ba
 			return defaultedBackends, secrets, err
 		}
 	}
-	if a.config.DefaultBackends.CustomForwarding != nil && backends.CustomForwarding == nil {
+	if a.config.DefaultBackends.CustomForwarding != nil && backends.CustomForwarding == nil &&
+		// only add the default custom forwarding backend if allowed by the configuration
+		a.config.AllowCustomBackends != nil && *a.config.AllowCustomBackends {
+		
 		log.Info(`configuring default backend "custom forwarding"`)
 		defaultedBackends.CustomForwarding = a.config.DefaultBackends.CustomForwarding
 	}
@@ -770,6 +777,21 @@ func getReplicas(cluster *extensions.Cluster, wokenUp *int32) *int32 {
 	}
 
 	return wokenUp
+}
+
+// validateCustomBackends checks if custom backends are configured and whether they are allowed.
+func (a *actuator) validateCustomBackends(backends *v1alpha1.AuditBackends) error {
+	if backends == nil {
+		return nil
+	}
+
+	if backends.CustomForwarding != nil && backends.CustomForwarding.Enabled {
+		if a.config.AllowCustomBackends == nil || !*a.config.AllowCustomBackends {
+			return fmt.Errorf("custom audit backends are not allowed by the operator configuration")
+		}
+	}
+
+	return nil
 }
 
 func (a *actuator) findBackendConfigMap(ctx context.Context, cluster *extensions.Cluster, configMapName string) (*corev1.ConfigMap, error) {
