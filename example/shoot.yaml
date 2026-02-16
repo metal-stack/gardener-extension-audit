@@ -38,9 +38,9 @@ spec:
         #   bucket: "my-audit-logs"
         #   region: "eu-west-1"
         #   secretResourceName: s3-secret
-        #   prefix: "cluster-logs"  # optional
+        #   prefix: "/cluster-logs"  # optional
         #   s3KeyFormat: "/%Y/%m/%d/$UUID" # optional
-        #   filesystemBufferSize: "1G"  # optional
+        #   bufferSize: "1G"  # optional
         #   endpoint: "https://custom-s3-endpoint" # optional, for S3-compatible storage
         #   tlsEnabled: true  # optional
         #   totalFileSize: "99M" # optional
