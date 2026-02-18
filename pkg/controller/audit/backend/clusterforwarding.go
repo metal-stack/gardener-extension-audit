@@ -29,12 +29,13 @@ type ClusterForwarding struct {
 	auditTailerImage        *gardener_imagevector.Image
 	auditTailerServerSecret *corev1.Secret
 	auditTailerClientSecret *corev1.Secret
+	proxySecret             *corev1.Secret
 
 	vpnGatewayReplicas int32
 	shootAccessSecret  *gutil.AccessSecret
 }
 
-func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, auditTailerClientSecret, auditTailerServerSecret *corev1.Secret, shootAccessSecret *gutil.AccessSecret, vpnGatewayReplicas int32) (ClusterForwarding, error) {
+func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, auditTailerClientSecret, auditTailerServerSecret, proxySecret *corev1.Secret, shootAccessSecret *gutil.AccessSecret, vpnGatewayReplicas int32) (ClusterForwarding, error) {
 	audittailerImage, err := imagevector.ImageVector().FindImage("audittailer")
 	if err != nil {
 		return ClusterForwarding{}, fmt.Errorf("failed to find audittailer image: %w", err)
@@ -61,6 +62,7 @@ func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, audit
 		auditTailerClientSecret: auditTailerClientSecret,
 		vpnGatewayReplicas:      vpnGatewayReplicas,
 		shootAccessSecret:       shootAccessSecret,
+		proxySecret:             proxySecret,
 	}, nil
 }
 
@@ -328,8 +330,16 @@ func (c ClusterForwarding) AdditionalShootObjects(*extensions.Cluster) []client.
 }
 
 func (c ClusterForwarding) AdditionalSeedObjects(cluster *extensions.Cluster) []client.Object {
-	// namespace of the control plane equals to the name of the cluster object
-	namespace := cluster.ObjectMeta.Name
+	var (
+		// namespace of the control plane equals to the name of the cluster object
+		namespace = cluster.ObjectMeta.Name
+
+		args []string
+	)
+
+	if c.proxySecret != nil {
+		args = append(args, fmt.Sprintf("--proxy-client-secret=%s", c.proxySecret.Name))
+	}
 
 	vpnGateway := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -365,6 +375,7 @@ func (c ClusterForwarding) AdditionalSeedObjects(cluster *extensions.Cluster) []
 							Name:            "gardener-vpn-gateway",
 							Image:           c.gardenerVpnGatewayImage.String(),
 							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args:            args,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "GATEWAY_SHOOT_KUBECONFIG",

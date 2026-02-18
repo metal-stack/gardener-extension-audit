@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -121,9 +123,15 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 			return nil, err
 		}
 
+		proxySecret, err := a.getLatestIssuedSecret(ctx, namespace, "kube-apiserver-http-proxy-client")
+		if err != nil {
+			return nil, fmt.Errorf("unable to retrieve proxy secrets: %w", err)
+		}
+
 		clusterForwardingBackend, err := backend.NewClusterForwarding(backends.ClusterForwarding,
 			secrets["audittailer-client"],
 			secrets["audittailer-server"],
+			proxySecret,
 			shootAccessSecret,
 			pointer.SafeDeref(getReplicas(cluster, pointer.Pointer(int32(1)))),
 		)
@@ -735,6 +743,55 @@ func (a *actuator) findBackendSecret(ctx context.Context, cluster *extensions.Cl
 	}
 
 	return secret, nil
+}
+
+const labelKeyIssuedAtTime = "issued-at-time"
+
+// getLatestIssuedSecret returns the secret with the "issued-at-time" label that represents the latest point in time
+func (a *actuator) getLatestIssuedSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error) {
+	secretList := &corev1.SecretList{}
+	if err := a.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+		secretsmanager.LabelKeyManagerIdentity: constants.SecretManagerIdentityGardenlet,
+		secretsmanager.LabelKeyName:            name,
+	}); err != nil {
+		return nil, err
+	}
+
+	secrets := secretList.Items
+
+	if len(secrets) == 0 {
+		return nil, nil
+	}
+
+	var newestSecret *corev1.Secret
+	var currentIssuedAtTime time.Time
+	for i := 0; i < len(secrets); i++ {
+		// if some of the secrets have no "issued-at-time" label
+		// we have a problem since this is the source of truth
+		issuedAt, ok := secrets[i].Labels[labelKeyIssuedAtTime]
+		if !ok {
+			// there are some old secrets from ancient gardener versions which have to be skipped... (e.g. ssh-keypair.old)
+			continue
+		}
+
+		issuedAtUnix, err := strconv.ParseInt(issuedAt, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		issuedAtTime := time.Unix(issuedAtUnix, 0).UTC()
+		if newestSecret == nil || issuedAtTime.After(currentIssuedAtTime) {
+			newestSecret = &secrets[i]
+			currentIssuedAtTime = issuedAtTime
+		}
+	}
+
+	if newestSecret == nil {
+		return nil, nil
+	}
+
+	return newestSecret, nil
 }
 
 func getReplicas(cluster *extensions.Cluster, wokenUp *int32) *int32 {
