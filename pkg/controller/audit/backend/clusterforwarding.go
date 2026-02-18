@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -29,13 +30,13 @@ type ClusterForwarding struct {
 	auditTailerImage        *gardener_imagevector.Image
 	auditTailerServerSecret *corev1.Secret
 	auditTailerClientSecret *corev1.Secret
-	proxySecret             *corev1.Secret
 
+	gardenerVersion    *semver.Version
 	vpnGatewayReplicas int32
 	shootAccessSecret  *gutil.AccessSecret
 }
 
-func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, auditTailerClientSecret, auditTailerServerSecret, proxySecret *corev1.Secret, shootAccessSecret *gutil.AccessSecret, vpnGatewayReplicas int32) (ClusterForwarding, error) {
+func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, auditTailerClientSecret, auditTailerServerSecret *corev1.Secret, shootAccessSecret *gutil.AccessSecret, vpnGatewayReplicas int32, gardenerVersion *semver.Version) (ClusterForwarding, error) {
 	audittailerImage, err := imagevector.ImageVector().FindImage("audittailer")
 	if err != nil {
 		return ClusterForwarding{}, fmt.Errorf("failed to find audittailer image: %w", err)
@@ -62,7 +63,7 @@ func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, audit
 		auditTailerClientSecret: auditTailerClientSecret,
 		vpnGatewayReplicas:      vpnGatewayReplicas,
 		shootAccessSecret:       shootAccessSecret,
-		proxySecret:             proxySecret,
+		gardenerVersion:         gardenerVersion,
 	}, nil
 }
 
@@ -337,8 +338,8 @@ func (c ClusterForwarding) AdditionalSeedObjects(cluster *extensions.Cluster) []
 		args []string
 	)
 
-	if c.proxySecret != nil {
-		args = append(args, fmt.Sprintf("--proxy-client-secret=%s", c.proxySecret.Name))
+	if c.gardenerVersion.GreaterThanEqual(semver.MustParse("v1.124")) {
+		args = append(args, "--proxy-client-secret=kube-apiserver-http-proxy-client")
 	}
 
 	vpnGateway := &appsv1.Deployment{
