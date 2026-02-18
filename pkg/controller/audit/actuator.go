@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -121,11 +122,17 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 			return nil, err
 		}
 
+		gardenerVersion, err := semver.NewVersion(cluster.Shoot.Status.Gardener.Version)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse gardener version: %w", err)
+		}
+
 		clusterForwardingBackend, err := backend.NewClusterForwarding(backends.ClusterForwarding,
 			secrets["audittailer-client"],
 			secrets["audittailer-server"],
 			shootAccessSecret,
 			pointer.SafeDeref(getReplicas(cluster, pointer.Pointer(int32(1)))),
+			gardenerVersion,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error creating cluster-forwarding backend: %w", err)

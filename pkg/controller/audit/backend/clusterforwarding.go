@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -30,11 +31,12 @@ type ClusterForwarding struct {
 	auditTailerServerSecret *corev1.Secret
 	auditTailerClientSecret *corev1.Secret
 
+	gardenerVersion    *semver.Version
 	vpnGatewayReplicas int32
 	shootAccessSecret  *gutil.AccessSecret
 }
 
-func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, auditTailerClientSecret, auditTailerServerSecret *corev1.Secret, shootAccessSecret *gutil.AccessSecret, vpnGatewayReplicas int32) (ClusterForwarding, error) {
+func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, auditTailerClientSecret, auditTailerServerSecret *corev1.Secret, shootAccessSecret *gutil.AccessSecret, vpnGatewayReplicas int32, gardenerVersion *semver.Version) (ClusterForwarding, error) {
 	audittailerImage, err := imagevector.ImageVector().FindImage("audittailer")
 	if err != nil {
 		return ClusterForwarding{}, fmt.Errorf("failed to find audittailer image: %w", err)
@@ -61,6 +63,7 @@ func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, audit
 		auditTailerClientSecret: auditTailerClientSecret,
 		vpnGatewayReplicas:      vpnGatewayReplicas,
 		shootAccessSecret:       shootAccessSecret,
+		gardenerVersion:         gardenerVersion,
 	}, nil
 }
 
@@ -328,8 +331,16 @@ func (c ClusterForwarding) AdditionalShootObjects(*extensions.Cluster) []client.
 }
 
 func (c ClusterForwarding) AdditionalSeedObjects(cluster *extensions.Cluster) []client.Object {
-	// namespace of the control plane equals to the name of the cluster object
-	namespace := cluster.ObjectMeta.Name
+	var (
+		// namespace of the control plane equals to the name of the cluster object
+		namespace = cluster.ObjectMeta.Name
+
+		args []string
+	)
+
+	if c.gardenerVersion.GreaterThanEqual(semver.MustParse("v1.124")) {
+		args = append(args, "--proxy-client-secret=kube-apiserver-http-proxy-client")
+	}
 
 	vpnGateway := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -365,6 +376,7 @@ func (c ClusterForwarding) AdditionalSeedObjects(cluster *extensions.Cluster) []
 							Name:            "gardener-vpn-gateway",
 							Image:           c.gardenerVpnGatewayImage.String(),
 							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args:            args,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "GATEWAY_SHOOT_KUBECONFIG",
