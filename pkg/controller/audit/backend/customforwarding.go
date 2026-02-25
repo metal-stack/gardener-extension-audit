@@ -124,7 +124,7 @@ func isValidPrivateKey(data []byte) bool {
 	}
 }
 
-func (c CustomForwarding) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
+func (c *CustomForwarding) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
 	customConfig := maps.Clone(c.outputConfig)
 
 	if c.secret != nil && c.secret.Data != nil {
@@ -148,7 +148,7 @@ func (c CustomForwarding) FluentBitConfig(*extensions.Cluster) fluentbitconfig.C
 	}
 }
 
-func (c CustomForwarding) PatchAuditWebhook(sts *appsv1.StatefulSet) {
+func (c *CustomForwarding) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 	if c.secret == nil {
 		return
 	}
@@ -200,10 +200,10 @@ func (c CustomForwarding) PatchAuditWebhook(sts *appsv1.StatefulSet) {
 	}
 }
 
-func (c CustomForwarding) AdditionalShootObjects(*extensions.Cluster) []client.Object {
+func (c *CustomForwarding) AdditionalShootObjects(*extensions.Cluster) []client.Object {
 	return nil
 }
 
-func (c CustomForwarding) AdditionalSeedObjects(*extensions.Cluster) []client.Object {
+func (c *CustomForwarding) AdditionalSeedObjects(*extensions.Cluster) []client.Object {
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_parseFluentBitOutput(t *testing.T) {
@@ -36,7 +37,7 @@ func Test_parseFluentBitOutput(t *testing.T) {
 				"region": "us-west-2",
 			},
 			assertionError: func(t *testing.T, err error) {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -51,7 +52,7 @@ func Test_parseFluentBitOutput(t *testing.T) {
 				"labels": "job=fluentbit, $sub['stream']",
 			},
 			assertionError: func(t *testing.T, err error) {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -68,7 +69,7 @@ func Test_parseFluentBitOutput(t *testing.T) {
 				"labels": "job=fluentbit, $sub['stream']",
 			},
 			assertionError: func(t *testing.T, err error) {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -171,23 +172,23 @@ func Test_isValidCertificate(t *testing.T) {
 func Test_isValidPrivateKey(t *testing.T) {
 	// Generate valid test keys
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	rsaKeyPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(rsaKey),
 	})
 
 	ecKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ecKeyBytes, err := x509.MarshalECPrivateKey(ecKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ecKeyPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "EC PRIVATE KEY",
 		Bytes: ecKeyBytes,
 	})
 
 	pkcs8KeyBytes, err := x509.MarshalPKCS8PrivateKey(rsaKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pkcs8KeyPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: pkcs8KeyBytes,
@@ -268,7 +269,7 @@ func Test_isValidPrivateKey(t *testing.T) {
 // generateTestCertificate creates a valid self-signed certificate for testing
 func generateTestCertificate(t *testing.T) *x509.Certificate {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
@@ -283,10 +284,10 @@ func generateTestCertificate(t *testing.T) *x509.Certificate {
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cert, err := x509.ParseCertificate(certBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return cert
 }

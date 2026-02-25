@@ -186,7 +186,7 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 			customForwardingBackend.SetSecret(customSecret)
 		}
 
-		backendMap["custom-forwarding"] = customForwardingBackend
+		backendMap["custom-forwarding"] = &customForwardingBackend
 	}
 
 	return backendMap, nil
