@@ -80,7 +80,7 @@ func Test_parseFluentBitOutput(t *testing.T) {
 				region us-west-2`,
 			expected: nil,
 			assertionError: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.ErrorContains(t, err, "missing [OUTPUT] section")
 			},
 		},
@@ -89,7 +89,7 @@ func Test_parseFluentBitOutput(t *testing.T) {
 			input:    ``,
 			expected: nil,
 			assertionError: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.ErrorContains(t, err, "empty configuration")
 			},
 		},
