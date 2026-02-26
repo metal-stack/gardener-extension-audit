@@ -401,7 +401,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 				Namespace: namespace,
 			},
 			Data: map[string]string{
-				"fluent-bit.conf": fluentbitconfig.Config{
+				"fluent-bit.yaml": fluentbitconfig.Config{
 					Service: map[string]string{
 						"log_level": "info",
 
@@ -435,10 +435,10 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 						},
 					},
 					Includes: []fluentbitconfig.Include{
-						"*.backend.conf",
+						"*.backend.yaml",
 					},
 				}.Generate(),
-				"null.backend.conf": fluentbitconfig.Config{
+				"null.backend.yaml": fluentbitconfig.Config{
 					// Add a default backend to ensure that the backend conf include can always match some
 					// file. fluentbit will fail to start otherwise if no backend exists. In addition, setting
 					// `storage.pause_on_chunks_overlimit on` does not work unless the "null" backend exists.
@@ -510,7 +510,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 								Image: fluentBitImage.String(),
 								Args: []string{
 									"--storage_path=/data",
-									"--config=/config/fluent-bit.conf",
+									"--config=/config/fluent-bit.yaml",
 								},
 								Ports: []corev1.ContainerPort{
 									{
@@ -655,7 +655,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 	}
 
 	for name, backend := range backends {
-		key := fmt.Sprintf("%s.backend.conf", name)
+		key := fmt.Sprintf("%s.backend.yaml", name)
 		fluentbitConfigMap.Data[key] = backend.FluentBitConfig(cluster).Generate()
 		backend.PatchAuditWebhook(auditwebhookStatefulSet)
 	}
