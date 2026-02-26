@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -431,7 +432,7 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 							"storage.pause_on_chunks_overlimit": pauseInputOnOverLimit,
 							"name":                              "http",
 							// buffer size must be coordinated with `ensureKubeAPIServerCommandLineArgs` in `pkg/webhook/kapiserver/ensurer.go`
-							"buffer_max_size": "4M",
+							"buffer_max_size": strconv.Itoa(auditConfig.Messages.MaxEventSize),
 						},
 					},
 					Includes: []fluentbitconfig.Include{

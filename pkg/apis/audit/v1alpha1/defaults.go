@@ -25,6 +25,8 @@ func SetDefaults_AuditConfig(a *AuditConfig) {
 	}
 
 	DefaultBackends(a.Backends)
+
+	DefaultMessages(a.Messages)
 }
 
 func DefaultBackends(backends *AuditBackends) {
@@ -85,4 +87,13 @@ func defaultBackendS3(backend *AuditBackendS3) {
 	if backend.S3KeyFormat == nil {
 		backend.S3KeyFormat = pointer.Pointer("/%Y/%m/%d/%H/%M/%S/$UUID")
 	}
+}
+
+func DefaultMessages(messages *AuditMessages) {
+	if messages == nil {
+		return
+	}
+
+	// Set 4MB as default maximum event size
+	messages.MaxEventSize = 4000000
 }

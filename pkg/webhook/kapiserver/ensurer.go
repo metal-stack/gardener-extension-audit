@@ -96,7 +96,7 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 	ps := &template.Spec
 	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-apiserver"); c != nil {
 		e.logger.Info("ensuring kube-apiserver deployment")
-		ensureKubeAPIServerCommandLineArgs(c, webhookMode)
+		ensureKubeAPIServerCommandLineArgs(c, webhookMode, auditConfig.Messages.MaxEventSize)
 		ensureVolumeMounts(c)
 		ensureVolumes(ps)
 	}
@@ -125,7 +125,7 @@ func ensureVolumes(ps *corev1.PodSpec) {
 	})
 }
 
-func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha1.AuditWebhookMode) {
+func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha1.AuditWebhookMode, maxEventSize int) {
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-config-file=", "/etc/audit-webhook/config/audit-webhook-config.yaml")
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-mode=", string(webhookMode))
 
@@ -138,8 +138,9 @@ func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha
 	// the request and response object are dropped. The request metadata and objectRef
 	// are still kept. As etcd defaults to a maximum request size of 1.5MB, the overall
 	// audit log entry should stay below that limit as well.
-	sizeLimit := fmt.Sprintf("%v", 4*1000*1000-25*1000)
+	eventSizeLimit := fmt.Sprintf("%v", maxEventSize-25*1000)
+	batchSizeLimit := fmt.Sprintf("%v", 4*1000*1000-25*1000)
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-enabled=", "true")
-	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-batch-size=", sizeLimit)
-	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-event-size=", sizeLimit)
+	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-batch-size=", batchSizeLimit)
+	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-event-size=", eventSizeLimit)
 }
