@@ -14,6 +14,9 @@ const (
 	AuditWebhookModeBatch          AuditWebhookMode = "batch"
 	AuditWebhookModeBlocking       AuditWebhookMode = "blocking"
 	AuditWebhookModeBlockingStrict AuditWebhookMode = "blocking-strict"
+	// Allowed maximum size of an audit log event
+	// matches with `buffer_max_size` in `seedObjects` (pkg/controller/audit/actuator.go)
+	AuditLogMaximumSizeEvent = 4000000
 
 	SplunkSecretTokenKey  = "token"
 	SplunkSecretCaFileKey = "ca"
@@ -193,5 +196,5 @@ type AuditBackendS3 struct {
 
 type AuditMessages struct {
 	// MaxEventSize defines the maximum size of an audit log event in bytes
-	MaxEventSize int `json:"maxEventSize,omitempty"`
+	MaxEventSize *int `json:"maxEventSize,omitempty"`
 }

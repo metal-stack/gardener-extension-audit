@@ -4,6 +4,7 @@ import (
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -94,6 +95,8 @@ func DefaultMessages(messages *AuditMessages) {
 		return
 	}
 
-	// Set 4MB as default maximum event size
-	messages.MaxEventSize = 4000000
+	// Set default maximum event size
+	if messages.MaxEventSize == nil {
+		messages.MaxEventSize = ptr.To(AuditLogMaximumSizeEvent)
+	}
 }
