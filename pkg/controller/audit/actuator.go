@@ -381,7 +381,12 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 	case v1alpha1.AuditWebhookModeBatch, v1alpha1.AuditWebhookModeBlocking, v1alpha1.AuditWebhookModeBlockingStrict:
 		webhookMode = mode
 	default:
-		webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+		defaultMode := a.config.DefaultWebhookMode
+		if defaultMode != nil && (*defaultMode == v1alpha1.AuditWebhookModeBatch || *defaultMode == v1alpha1.AuditWebhookModeBlocking || *defaultMode == v1alpha1.AuditWebhookModeBlockingStrict) {
+			webhookMode = *defaultMode
+		} else {
+			webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+		}
 	}
 
 	pauseInputOnOverLimit := "off"
