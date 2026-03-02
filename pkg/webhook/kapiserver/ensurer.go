@@ -77,7 +77,13 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 	case v1alpha1.AuditWebhookModeBatch, v1alpha1.AuditWebhookModeBlocking, v1alpha1.AuditWebhookModeBlockingStrict:
 		webhookMode = mode
 	default:
-		webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+		// Use configured default webhook mode or fall back to blocking-strict
+		defaultMode := audit.DefaultAddOptions.Config.DefaultWebhookMode
+		if defaultMode != nil && (*defaultMode == v1alpha1.AuditWebhookModeBatch || *defaultMode == v1alpha1.AuditWebhookModeBlocking || *defaultMode == v1alpha1.AuditWebhookModeBlockingStrict) {
+			webhookMode = *defaultMode
+		} else {
+			webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+		}
 	}
 
 	if auditConfig.Backends != nil {
