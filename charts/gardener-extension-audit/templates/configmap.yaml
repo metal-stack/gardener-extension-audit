@@ -23,6 +23,10 @@ data:
 {{- toYaml .Values.config.defaultBackends | nindent 6 }}
 {{- end }}
 
+{{ if .Values.config.defaultWebhookMode }}
+    defaultWebhookMode: {{ .Values.config.defaultWebhookMode }}
+{{- end }}
+
 {{- range $secret := .Values.config.defaultBackendSecrets }}
 ---
 apiVersion: v1

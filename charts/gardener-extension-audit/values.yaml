@@ -43,6 +43,8 @@ config:
 
   defaultBackends:
 
+  defaultWebhookMode:
+
   defaultBackendSecrets:
     # - name: my-secret
     #   data:

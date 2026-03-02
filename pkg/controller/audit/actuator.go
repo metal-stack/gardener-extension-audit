@@ -253,7 +253,7 @@ func (a *actuator) createResources(ctx context.Context, log logr.Logger, auditCo
 		shootObjects = append(shootObjects, backend.AdditionalShootObjects(cluster)...)
 	}
 
-	seedObjects, err := seedObjects(auditConfig, cluster, backends, namespace)
+	seedObjects, err := a.seedObjects(auditConfig, cluster, backends, namespace)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func (a *actuator) generateCerts(ctx context.Context, log logr.Logger, cluster *
 	return secrets, nil
 }
 
-func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster, backends map[string]backend.Backend, namespace string) ([]client.Object, error) {
+func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster, backends map[string]backend.Backend, namespace string) ([]client.Object, error) {
 	fluentBitImage, err := imagevector.ImageVector().FindImage("fluent-bit")
 	if err != nil {
 		return nil, fmt.Errorf("failed to find fluent-bit image: %w", err)
@@ -381,7 +381,12 @@ func seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *extensions.Cluster,
 	case v1alpha1.AuditWebhookModeBatch, v1alpha1.AuditWebhookModeBlocking, v1alpha1.AuditWebhookModeBlockingStrict:
 		webhookMode = mode
 	default:
-		webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+		defaultMode := a.config.DefaultWebhookMode
+		if defaultMode != nil && (*defaultMode == v1alpha1.AuditWebhookModeBatch || *defaultMode == v1alpha1.AuditWebhookModeBlocking || *defaultMode == v1alpha1.AuditWebhookModeBlockingStrict) {
+			webhookMode = *defaultMode
+		} else {
+			webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+		}
 	}
 
 	pauseInputOnOverLimit := "off"
