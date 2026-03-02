@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-output
+  namespace: garden-dev    # change it to your project namespace, e.g., garden-<my-project-name>
+data:
+  fluent-bit-output.conf: |-
+    [OUTPUT]
+      Name       loki
+      Match      audit
+      host       loki.example.com
+      port       443
+      tls        On
+      tls.verify On
+      labels     job=fluentbit
+      tenant_ID  test-audit

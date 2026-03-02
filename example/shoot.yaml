@@ -46,6 +46,10 @@ spec:
         #   totalFileSize: "99M" # optional
         #   uploadTimeout: "1m" # optional
         #   useCompression: true # optional
+        # customForwarding:
+        #   enabled: true
+        #   configMapResourceName: custom-output
+        #   secretResourceName: custom-tls
   # resources:
   #   - name: splunk-secret
   #     resourceRef:
@@ -57,6 +61,16 @@ spec:
   #       apiVersion: v1
   #       kind: Secret
   #       name: s3-secret
+  #   - name: custom-output
+  #     resourceRef:
+  #       apiVersion: v1
+  #       kind: ConfigMap
+  #       name: custom-output
+  #   - name: custom-tls
+  #     resourceRef:
+  #       apiVersion: v1
+  #       kind: Secret
+  #       name: custom-tls
   networking:
     type: calico
     nodes: 10.10.0.0/16

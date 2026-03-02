@@ -21,4 +21,8 @@ type ControllerConfiguration struct {
 
 	// HealthCheckConfig is the config for the health check controller
 	HealthCheckConfig *healthcheckconfigv1alpha1.HealthCheckConfig
+	
+	// AllowCustomBackends controls whether users are allowed to configure custom audit backends.
+	// If set to false, custom forwarding backends will be rejected during validation.
+	AllowCustomBackends *bool
 }
