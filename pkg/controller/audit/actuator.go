@@ -382,7 +382,7 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 		webhookMode = mode
 	default:
 		// Use configured default webhook mode or fall back to blocking-strict
-		if a.config.DefaultWebhookMode != nil {
+		if a.config.DefaultWebhookMode != nil && (*a.config.DefaultWebhookMode == v1alpha1.AuditWebhookModeBatch || *a.config.DefaultWebhookMode == v1alpha1.AuditWebhookModeBlocking || *a.config.DefaultWebhookMode == v1alpha1.AuditWebhookModeBlockingStrict) {
 			webhookMode = *a.config.DefaultWebhookMode
 		} else {
 			webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
