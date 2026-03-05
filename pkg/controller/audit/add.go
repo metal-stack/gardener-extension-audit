@@ -53,6 +53,6 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		Resync:            0,
 		Predicates:        extension.DefaultPredicates(ctx, mgr, DefaultAddOptions.IgnoreOperationAnnotation),
 		Type:              Type,
-		ExtensionClass:    opts.ExtensionClass,
+		ExtensionClasses:  []extensionsv1alpha1.ExtensionClass{opts.ExtensionClass},
 	})
 }
