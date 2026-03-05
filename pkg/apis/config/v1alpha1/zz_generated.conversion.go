@@ -41,6 +41,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(in *ControllerConfiguration, out *config.ControllerConfiguration, s conversion.Scope) error {
 	out.DefaultBackends = (*auditv1alpha1.AuditBackends)(unsafe.Pointer(in.DefaultBackends))
+	out.DefaultWebhookMode = (*auditv1alpha1.AuditWebhookMode)(unsafe.Pointer(in.DefaultWebhookMode))
 	out.HealthCheckConfig = (*configv1alpha1.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
 	return nil
 }
@@ -52,6 +53,7 @@ func Convert_v1alpha1_ControllerConfiguration_To_config_ControllerConfiguration(
 
 func autoConvert_config_ControllerConfiguration_To_v1alpha1_ControllerConfiguration(in *config.ControllerConfiguration, out *ControllerConfiguration, s conversion.Scope) error {
 	out.DefaultBackends = (*auditv1alpha1.AuditBackends)(unsafe.Pointer(in.DefaultBackends))
+	out.DefaultWebhookMode = (*auditv1alpha1.AuditWebhookMode)(unsafe.Pointer(in.DefaultWebhookMode))
 	out.HealthCheckConfig = (*configv1alpha1.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
 	return nil
 }

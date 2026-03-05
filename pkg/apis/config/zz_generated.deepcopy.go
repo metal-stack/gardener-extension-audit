@@ -24,6 +24,11 @@ func (in *ControllerConfiguration) DeepCopyInto(out *ControllerConfiguration) {
 		*out = new(v1alpha1.AuditBackends)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.DefaultWebhookMode != nil {
+		in, out := &in.DefaultWebhookMode, &out.DefaultWebhookMode
+		*out = new(v1alpha1.AuditWebhookMode)
+		**out = **in
+	}
 	if in.HealthCheckConfig != nil {
 		in, out := &in.HealthCheckConfig, &out.HealthCheckConfig
 		*out = new(configv1alpha1.HealthCheckConfig)

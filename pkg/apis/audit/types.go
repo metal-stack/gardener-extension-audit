@@ -65,6 +65,9 @@ type AuditBackends struct {
 
 	// S3 will store audit logs in an S3 bucket.
 	S3 *AuditBackendS3
+
+	// CustomForwarding will forward the audit data to a custom endpoint.
+	CustomForwarding *AuditBackendCustomForwarding
 }
 
 type AuditBackendLog struct {
@@ -168,4 +171,21 @@ type AuditBackendS3 struct {
 type AuditMessages struct {
 	// MaxEventSize defines the maximum size of an audit log event in bytes
 	MaxEventSize *int `json:"maxEventSize,omitempty"`
+}
+
+type AuditBackendCustomForwarding struct {
+	// Enabled allows to turn this backend on.
+	Enabled bool
+
+	// ConfigMapResourceName is a reference under Shoot.spec.resources to the config map used to configure the custom forwarding backend.
+	ConfigMapResourceName string
+	
+	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the custom forwarding backend.
+	//
+	// The referenced secret may contain the following keys:
+	//
+	// - ca.crt: Optional, CA used to validate the server certificate.
+	// - tls.key: Optional, client private key (only for mTLS).
+	// - tls.crt: Optional, client certificate (only for mTLS).
+	SecretResourceName string
 }

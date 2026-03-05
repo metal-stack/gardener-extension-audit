@@ -3,6 +3,7 @@ module github.com/metal-stack/gardener-extension-audit
 go 1.24
 
 require (
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/gardener/gardener v1.113.2
 	github.com/go-logr/logr v1.4.2
@@ -27,7 +28,6 @@ require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.3.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

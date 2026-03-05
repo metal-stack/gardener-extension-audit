@@ -23,6 +23,10 @@ const (
 
 	S3SecretAccessKeyIDKey     = "access_key_id"
 	S3SecretSecretAccessKeyKey = "secret_access_key"
+
+	SecretCaFileKey     = "ca.crt"
+	SecretTLSPrivateKey = "tls.key"
+	SecretTLSCertKey    = "tls.crt"
 )
 
 type (
@@ -87,6 +91,10 @@ type AuditBackends struct {
 	// S3 will store audit logs in an S3 bucket.
 	// +optional
 	S3 *AuditBackendS3 `json:"s3,omitempty"`
+
+	// CustomForwarding will forward the audit data to a custom endpoint.
+	// +optional
+	CustomForwarding *AuditBackendCustomForwarding `json:"customForwarding,omitempty"`
 
 	// Possible backends that would be helpful as well:
 	// - Forward
@@ -197,4 +205,21 @@ type AuditBackendS3 struct {
 type AuditMessages struct {
 	// MaxEventSize defines the maximum size of an audit log event in bytes
 	MaxEventSize *int `json:"maxEventSize,omitempty"`
+}
+
+type AuditBackendCustomForwarding struct {
+	// Enabled allows to turn this backend on.
+	Enabled bool `json:"enabled"`
+
+	// ConfigMapResourceName is a reference under Shoot.spec.resources to the config map used to configure the custom forwarding backend.
+	ConfigMapResourceName string `json:"configMapResourceName"`
+
+	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the custom forwarding backend.
+	//
+	// The referenced secret may contain the following keys:
+	//
+	// - ca.crt: Optional, CA used to validate the server certificate.
+	// - tls.key: Optional, client private key (only for mTLS).
+	// - tls.crt: Optional, client certificate (only for mTLS).
+	SecretResourceName string `json:"secretResourceName,omitempty"`
 }

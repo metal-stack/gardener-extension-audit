@@ -16,7 +16,16 @@ type ControllerConfiguration struct {
 	// DefaultBackends can be used to configure provider-default backends that are not explicitly disabled from the user.
 	DefaultBackends *v1alpha1.AuditBackends `json:"defaultBackends"`
 
+	// DefaultWebhookMode can be used to configure the provider-default webhook mode when not explicitly set by the user.
+	// +optional
+	DefaultWebhookMode *v1alpha1.AuditWebhookMode `json:"defaultWebhookMode,omitempty"`
+
 	// HealthCheckConfig is the config for the health check controller
 	// +optional
 	HealthCheckConfig *healthcheckconfigv1alpha1.HealthCheckConfig `json:"healthCheckConfig,omitempty"`
+	
+	// AllowCustomBackends controls whether users are allowed to configure custom audit backends.
+	// If set to false, custom forwarding backends will be rejected during validation.
+	// +optional
+	AllowCustomBackends *bool `json:"allowCustomBackends,omitempty"`
 }
