@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -12,6 +11,6 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 // SetDefaults_ControllerConfiguration sets defaults for the ControllerConfiguration.
 func SetDefaults_ControllerConfiguration(obj *ControllerConfiguration) {
 	if obj.AllowCustomBackends == nil {
-		obj.AllowCustomBackends = ptr.To(false)
+		obj.AllowCustomBackends = new(false)
 	}
 }

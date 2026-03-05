@@ -6,7 +6,6 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/metal-stack/gardener-extension-audit/pkg/apis/audit/v1alpha1"
 	"github.com/metal-stack/gardener-extension-audit/pkg/fluentbitconfig"
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -67,7 +66,7 @@ func Test_S3FluentBitConfig(t *testing.T) {
 				Enabled: true,
 				Bucket:  "bucket",
 				Region:  "region",
-				Prefix:  pointer.Pointer("audit"),
+				Prefix:  new("audit"),
 			},
 			secretData: validSecretData,
 			assertionError: func(t *testing.T, err error) {
@@ -82,7 +81,7 @@ func Test_S3FluentBitConfig(t *testing.T) {
 				Enabled:     true,
 				Bucket:      "bucket",
 				Region:      "region",
-				S3KeyFormat: pointer.Pointer("audit"),
+				S3KeyFormat: new("audit"),
 			},
 			secretData: validSecretData,
 			assertionError: func(t *testing.T, err error) {
@@ -125,13 +124,13 @@ func Test_S3FluentBitConfig(t *testing.T) {
 				Enabled:              true,
 				Bucket:               "bucket",
 				Region:               "region",
-				FilesystemBufferSize: pointer.Pointer("1G"),
-				S3KeyFormat:          pointer.Pointer("/%Y/%m/%d/$UUID"),
-				Prefix:               pointer.Pointer("/logs"),
-				UploadTimeout:        pointer.Pointer("2m"),
-				TotalFileSize:        pointer.Pointer("99M"),
-				TlsEnabled:           pointer.Pointer(false),
-				UseCompression:       pointer.Pointer(true),
+				FilesystemBufferSize: new("1G"),
+				S3KeyFormat:          new("/%Y/%m/%d/$UUID"),
+				Prefix:               new("/logs"),
+				UploadTimeout:        new("2m"),
+				TotalFileSize:        new("99M"),
+				TlsEnabled:           new(false),
+				UseCompression:       new(true),
 			},
 			secretData: validSecretData,
 			assertionError: func(t *testing.T, err error) {
