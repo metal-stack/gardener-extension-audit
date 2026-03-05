@@ -252,7 +252,7 @@ func (a *actuator) applyDefaultBackends(ctx context.Context, log logr.Logger, ba
 	if a.config.DefaultBackends.CustomForwarding != nil && backends.CustomForwarding == nil &&
 		// only add the default custom forwarding backend if allowed by the configuration
 		a.config.AllowCustomBackends != nil && *a.config.AllowCustomBackends {
-		
+
 		log.Info(`configuring default backend "custom forwarding"`)
 		defaultedBackends.CustomForwarding = a.config.DefaultBackends.CustomForwarding
 	}
@@ -420,6 +420,17 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 			webhookMode = *defaultMode
 		} else {
 			webhookMode = v1alpha1.AuditWebhookModeBlockingStrict
+		}
+	}
+
+	if auditConfig.Backends != nil {
+		if pointer.SafeDeref(auditConfig.Backends.ClusterForwarding).Enabled && webhookMode == v1alpha1.AuditWebhookModeBlockingStrict {
+			// `blocking-strict` in combination with cluster-forwarding can lead to an unpleasant
+			// deadlock from which the kube-apiserver cannot recover: when the kube-apiserver starts
+			// blocking, the gateway-forwarder cannot figure out the destination service
+			// in the shoot anymore. (#68)
+			// TODO: prevent this configuration through admission webhook.
+			webhookMode = v1alpha1.AuditWebhookModeBlocking
 		}
 	}
 
@@ -826,7 +837,7 @@ func (a *actuator) findBackendConfigMap(ctx context.Context, cluster *extensions
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if configMap == nil {
 		return nil, fmt.Errorf("configmap resource with name %q not found in shoot resources", configMapName)
 	}
