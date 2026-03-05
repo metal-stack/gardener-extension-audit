@@ -17,13 +17,10 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
-
-var log = logf.Log.WithName("gardener-extension-audit")
 
 // NewControllerManagerCommand creates a new command that is used to start the controller.
 func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
