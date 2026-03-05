@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -181,7 +180,7 @@ func (c ClusterForwarding) AdditionalShootObjects(*extensions.Cluster) []client.
 						},
 					},
 					Spec: corev1.PodSpec{
-						AutomountServiceAccountToken: ptr.To(false),
+						AutomountServiceAccountToken: new(false),
 						Containers: []corev1.Container{
 							{
 								Name:            "audittailer",
@@ -225,9 +224,9 @@ func (c ClusterForwarding) AdditionalShootObjects(*extensions.Cluster) []client.
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									RunAsUser:                ptr.To(int64(65534)),
-									RunAsNonRoot:             ptr.To(true),
-									AllowPrivilegeEscalation: ptr.To(false),
+									RunAsUser:                new(int64(65534)),
+									RunAsNonRoot:             new(true),
+									AllowPrivilegeEscalation: new(false),
 									SeccompProfile: &corev1.SeccompProfile{
 										Type: corev1.SeccompProfileTypeRuntimeDefault,
 									},
