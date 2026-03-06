@@ -17,6 +17,9 @@ const (
 	// Allowed maximum size of an audit log event
 	// matches with `buffer_max_size` in `seedObjects` (pkg/controller/audit/actuator.go)
 	AuditLogMaximumSizeEvent = 4000000
+	// Minimum size of an audit log event
+	// Considers up to 25KB of overhead
+	AuditLogMinimumSizeEvent = 25001
 
 	SplunkSecretTokenKey  = "token"
 	SplunkSecretCaFileKey = "ca"
