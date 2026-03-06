@@ -65,7 +65,7 @@ const (
 )
 
 func (s Splunk) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Config {
-	splunkConfig := map[string]string{
+	splunkConfig := map[string]any{
 		"match":                    "audit",
 		"name":                     "splunk",
 		"retry_limit":              "no_limits", // let fluent-bit never discard any data

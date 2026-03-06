@@ -68,7 +68,7 @@ func NewClusterForwarding(backend *v1alpha1.AuditBackendClusterForwarding, audit
 }
 
 func (c ClusterForwarding) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
-	forwardingConfig := map[string]string{
+	forwardingConfig := map[string]any{
 		"match":                    "audit",
 		"name":                     "forward",
 		"retry_limit":              "no_limits", // let fluent-bit never discard any data
