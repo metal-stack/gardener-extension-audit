@@ -495,7 +495,7 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 					// At least that is the case when using the "Splunk" backend. Thus, just always add the
 					// null backend to keep output names consistent.
 					Output: []fluentbitconfig.Output{
-						map[string]string{
+						map[string]any{
 							"match": "audit",
 							"name":  "null",
 							// Must set storage size limit as otherwise the size limit for other outputs does not work.
