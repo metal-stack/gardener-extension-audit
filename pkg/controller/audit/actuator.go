@@ -145,6 +145,20 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 		backendMap["cluster-forwarding"] = clusterForwardingBackend
 	}
 
+	if pointer.SafeDeref(backends.OpenTelemetry).Enabled {
+		bearerTokenSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.OpenTelemetry.BearerToken.SecretResourceName)
+		if err != nil {
+			return nil, err
+		}
+
+		openTelemetryBackend, err := backend.NewOpenTelemetry(backends.OpenTelemetry, bearerTokenSecret)
+		if err != nil {
+			return nil, fmt.Errorf("error creating opentelemetry backend: %w", err)
+		}
+
+		backendMap["opentelemetry"] = openTelemetryBackend
+	}
+
 	if pointer.SafeDeref(backends.Splunk).Enabled {
 		splunkSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.Splunk.SecretResourceName)
 		if err != nil {
@@ -252,7 +266,7 @@ func (a *actuator) applyDefaultBackends(ctx context.Context, log logr.Logger, ba
 	if a.config.DefaultBackends.CustomForwarding != nil && backends.CustomForwarding == nil &&
 		// only add the default custom forwarding backend if allowed by the configuration
 		a.config.AllowCustomBackends != nil && *a.config.AllowCustomBackends {
-		
+
 		log.Info(`configuring default backend "custom forwarding"`)
 		defaultedBackends.CustomForwarding = a.config.DefaultBackends.CustomForwarding
 	}
@@ -826,7 +840,7 @@ func (a *actuator) findBackendConfigMap(ctx context.Context, cluster *extensions
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if configMap == nil {
 		return nil, fmt.Errorf("configmap resource with name %q not found in shoot resources", configMapName)
 	}
