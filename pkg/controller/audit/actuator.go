@@ -135,7 +135,7 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 			secrets["audittailer-client"],
 			secrets["audittailer-server"],
 			shootAccessSecret,
-			pointer.SafeDeref(getReplicas(cluster, pointer.Pointer(int32(1)))),
+			pointer.SafeDeref(getReplicas(cluster, new(int32(1)))),
 			gardenerVersion,
 		)
 		if err != nil {
@@ -698,7 +698,7 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: pointer.Pointer(intstr.FromInt32(1)),
+				MinAvailable: new(intstr.FromInt32(1)),
 				Selector:     auditwebhookStatefulSet.Spec.Selector,
 			},
 		},
@@ -796,7 +796,7 @@ func (a *actuator) findBackendSecret(ctx context.Context, cluster *extensions.Cl
 
 func getReplicas(cluster *extensions.Cluster, wokenUp *int32) *int32 {
 	if controller.IsHibernated(cluster) {
-		return pointer.Pointer(int32(0))
+		return new(int32(0))
 	}
 
 	return wokenUp

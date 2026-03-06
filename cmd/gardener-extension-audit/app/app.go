@@ -17,13 +17,10 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
-
-var log = logf.Log.WithName("gardener-extension-audit")
 
 // NewControllerManagerCommand creates a new command that is used to start the controller.
 func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
@@ -92,7 +89,7 @@ func (o *Options) run(ctx context.Context) error {
 		return fmt.Errorf("could not add controllers to manager: %w", err)
 	}
 
-	if _, err := o.webhookOptions.Completed().AddToManager(ctx, mgr, nil); err != nil {
+	if _, err := o.webhookOptions.Completed().AddToManager(ctx, mgr, nil, o.generalOptions.Completed().AutonomousShootCluster); err != nil {
 		return fmt.Errorf("could not add the mutating webhook to manager: %w", err)
 	}
 

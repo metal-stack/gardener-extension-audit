@@ -205,10 +205,8 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 	)
 
 	for _, m := range ms {
-		m := m
 
 		for name, output := range m.Output {
-			output := output
 
 			sums[name] += output.Retries
 		}
