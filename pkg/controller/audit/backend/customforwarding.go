@@ -4,7 +4,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"maps"
 	"path/filepath"
 	"strings"
 
@@ -125,7 +124,10 @@ func isValidPrivateKey(data []byte) bool {
 }
 
 func (c *CustomForwarding) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
-	customConfig := maps.Clone(c.outputConfig)
+	customConfig := make(map[string]any, len(c.outputConfig))
+	for key, value := range c.outputConfig {
+		customConfig[key] = value
+	}
 
 	if c.secret != nil && c.secret.Data != nil {
 		if _, ok := c.secret.Data[v1alpha1.SecretCaFileKey]; ok {

@@ -32,11 +32,11 @@ func TestConfig_Generate(t *testing.T) {
 					},
 				},
 				Output: []Output{
-					map[string]string{
+					map[string]any{
 						"name":  "    stdout  ",
 						"match": "*",
 					},
-					map[string]string{
+					map[string]any{
 						"name": "null",
 					},
 				},
@@ -66,7 +66,7 @@ includes:
 			name: "only output section",
 			config: &Config{
 				Output: []Output{
-					map[string]string{
+					map[string]any{
 						"name":  "stdout",
 						"match": "*",
 					},

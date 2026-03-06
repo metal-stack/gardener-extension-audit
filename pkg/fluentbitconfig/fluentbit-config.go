@@ -19,7 +19,7 @@ type (
 	Input   map[string]string
 	// some filter attributes must be passed as a list such that "string" is not sufficient
 	Filter  map[string]any
-	Output  map[string]string
+	Output  map[string]any
 	Include string
 )
 
