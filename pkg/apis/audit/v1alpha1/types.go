@@ -14,6 +14,11 @@ const (
 	AuditWebhookModeBatch          AuditWebhookMode = "batch"
 	AuditWebhookModeBlocking       AuditWebhookMode = "blocking"
 	AuditWebhookModeBlockingStrict AuditWebhookMode = "blocking-strict"
+	// Allowed maximum size of an audit log event
+	// matches with `buffer_max_size` in `seedObjects` (pkg/controller/audit/actuator.go)
+	AuditLogMaximumSizeEvent = 4000000
+	// Consider up to 25KB of buffer/space for events in case the kube-apiserver slightly exceeds the event/batch size limit due to boilerplate
+	AuditLogEventBuffer = 25000
 
 	SplunkSecretTokenKey  = "token"
 	SplunkSecretCaFileKey = "ca"
@@ -54,6 +59,10 @@ type AuditConfig struct {
 	// Backends contains the settings for the various backends.
 	// +optional
 	Backends *AuditBackends `json:"backends,omitempty"`
+
+	// Messages contains settings for configuring attributes of the audit log events/messages.
+	// +optional
+	Messages *AuditMessages `json:"messages,omitempty"`
 }
 
 type AuditPersistence struct {
@@ -193,6 +202,11 @@ type AuditBackendS3 struct {
 	// UseCompression enables gzip compression for the S3 objects.
 	// +optional
 	UseCompression *bool `json:"useCompression,omitempty"`
+}
+
+type AuditMessages struct {
+	// MaxEventSize defines the maximum size of an audit log event in bytes
+	MaxEventSize *int `json:"maxEventSize,omitempty"`
 }
 
 type AuditBackendCustomForwarding struct {
