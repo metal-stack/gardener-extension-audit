@@ -25,6 +25,18 @@ spec:
           enabled: true
         # clusterForwarding:
         #   enabled: true
+        # openTelemetry:
+        #   enabled: true
+        #   attributes:
+        #     service.instance.id: mycluster
+        #   auditIDAttribute: log.id
+        #   batchSize: 1000
+        #   bearerToken:
+        #     secretResourceName: opentelemetry-secret
+        #   host: opentelemetry-log-target
+        #   port: "443"
+        #   tls: true
+        #   tlshost: <hostname for OTLP host if needed for tls sni|certificate verification>
         # splunk:
         #   enabled: true
         #   index: <splunk index>
@@ -51,6 +63,11 @@ spec:
         #   configMapResourceName: custom-output
         #   secretResourceName: custom-tls
   # resources:
+  #   - name: opentelemetry-secret
+  #     resourceRef:
+  #       apiVersion: v1
+  #       kind: Secret
+  #       name: opentelemetry-secret
   #   - name: splunk-secret
   #     resourceRef:
   #       apiVersion: v1
