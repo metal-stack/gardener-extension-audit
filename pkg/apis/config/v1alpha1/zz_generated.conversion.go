@@ -43,6 +43,7 @@ func autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfigurat
 	out.DefaultBackends = (*auditv1alpha1.AuditBackends)(unsafe.Pointer(in.DefaultBackends))
 	out.DefaultWebhookMode = (*auditv1alpha1.AuditWebhookMode)(unsafe.Pointer(in.DefaultWebhookMode))
 	out.HealthCheckConfig = (*configv1alpha1.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
+	out.AllowCustomBackends = (*bool)(unsafe.Pointer(in.AllowCustomBackends))
 	return nil
 }
 
@@ -55,6 +56,7 @@ func autoConvert_config_ControllerConfiguration_To_v1alpha1_ControllerConfigurat
 	out.DefaultBackends = (*auditv1alpha1.AuditBackends)(unsafe.Pointer(in.DefaultBackends))
 	out.DefaultWebhookMode = (*auditv1alpha1.AuditWebhookMode)(unsafe.Pointer(in.DefaultWebhookMode))
 	out.HealthCheckConfig = (*configv1alpha1.HealthCheckConfig)(unsafe.Pointer(in.HealthCheckConfig))
+	out.AllowCustomBackends = (*bool)(unsafe.Pointer(in.AllowCustomBackends))
 	return nil
 }
 

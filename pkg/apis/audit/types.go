@@ -56,6 +56,10 @@ type AuditBackends struct {
 	// picked up by the log collecting solution of the cluster operator's choice.
 	ClusterForwarding *AuditBackendClusterForwarding
 
+	// OpenTelemetry will forward the audit data to an OTLP-compatible endpoint.
+	// +optional
+	OpenTelemetry *AuditBackendOpenTelemetry `json:"openTelemetry,omitempty"`
+
 	// Splunk will forward the audit data to a splunk HEC endpoint.
 	Splunk *AuditBackendSplunk
 
@@ -78,6 +82,52 @@ type AuditBackendClusterForwarding struct {
 	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
 	// +optional
 	FilesystemBufferSize *string
+}
+
+type AuditBackendOpenTelemetry struct {
+	// Enabled allows to turn this backend on.
+	Enabled bool
+
+	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
+	// +optional
+	FilesystemBufferSize *string
+
+	// Host is the hostname or IP of the OTLP endpoint.
+	Host string
+
+	// Port is the port on which the OTLP endpoint is listening.
+	Port string
+
+	// TlsEnabled determines whether TLS should be used to communicate to the OTLP endpoint.
+	TlsEnabled *bool
+
+	// TlsHost is the hostname that fluent-bit should request through SNI when connecting to a site that serves different hostnames under one IP.
+	TlsHost string
+
+	// Attributes contains a map of custom key/value pairs. The attributes are added to each individual log message.
+	// The keys may only contain letters, numbers, '_' or '.'. Empty keys are also not accepted.
+	Attributes map[string]string
+
+	// AuditIDAttribute specifies the name of an attribute into which to copy the `auditID` set by Kubernetes.
+	// Copying only happens if the field is set.
+	// +optional
+	AuditIDAttribute string
+
+	// BatchSize specifies the maximum number of log records to be flushed at once.
+	// +optional
+	BatchSize *int
+
+	// BearerToken specify the token to use for authenticating to the OTLP endpoint.
+	BearerToken AuditBackendOpenTelemetryBearerToken
+}
+
+type AuditBackendOpenTelemetryBearerToken struct {
+	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the OTLP backend.
+	//
+	// The referenced secret may contain the following keys:
+	//
+	// - token: Required, bearer token to authenticate against OTLP endpoint
+	SecretResourceName string
 }
 
 type AuditBackendSplunk struct {
@@ -170,7 +220,7 @@ type AuditBackendCustomForwarding struct {
 
 	// ConfigMapResourceName is a reference under Shoot.spec.resources to the config map used to configure the custom forwarding backend.
 	ConfigMapResourceName string
-	
+
 	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the custom forwarding backend.
 	//
 	// The referenced secret may contain the following keys:
