@@ -145,6 +145,20 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 		backendMap["cluster-forwarding"] = clusterForwardingBackend
 	}
 
+	if pointer.SafeDeref(backends.OpenTelemetry).Enabled {
+		bearerTokenSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.OpenTelemetry.BearerToken.SecretResourceName)
+		if err != nil {
+			return nil, err
+		}
+
+		openTelemetryBackend, err := backend.NewOpenTelemetry(backends.OpenTelemetry, bearerTokenSecret)
+		if err != nil {
+			return nil, fmt.Errorf("error creating opentelemetry backend: %w", err)
+		}
+
+		backendMap["opentelemetry"] = openTelemetryBackend
+	}
+
 	if pointer.SafeDeref(backends.Splunk).Enabled {
 		splunkSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.Splunk.SecretResourceName)
 		if err != nil {
@@ -451,7 +465,7 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 				Namespace: namespace,
 			},
 			Data: map[string]string{
-				"fluent-bit.conf": fluentbitconfig.Config{
+				"fluent-bit.yaml": fluentbitconfig.Config{
 					Service: map[string]string{
 						"log_level": "info",
 
@@ -485,17 +499,17 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 						},
 					},
 					Includes: []fluentbitconfig.Include{
-						"*.backend.conf",
+						"*.backend.yaml",
 					},
 				}.Generate(),
-				"null.backend.conf": fluentbitconfig.Config{
+				"null.backend.yaml": fluentbitconfig.Config{
 					// Add a default backend to ensure that the backend conf include can always match some
 					// file. fluentbit will fail to start otherwise if no backend exists. In addition, setting
 					// `storage.pause_on_chunks_overlimit on` does not work unless the "null" backend exists.
 					// At least that is the case when using the "Splunk" backend. Thus, just always add the
 					// null backend to keep output names consistent.
 					Output: []fluentbitconfig.Output{
-						map[string]string{
+						map[string]any{
 							"match": "audit",
 							"name":  "null",
 							// Must set storage size limit as otherwise the size limit for other outputs does not work.
@@ -560,7 +574,7 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 								Image: fluentBitImage.String(),
 								Args: []string{
 									"--storage_path=/data",
-									"--config=/config/fluent-bit.conf",
+									"--config=/config/fluent-bit.yaml",
 								},
 								Ports: []corev1.ContainerPort{
 									{
@@ -705,7 +719,7 @@ func (a *actuator) seedObjects(auditConfig *v1alpha1.AuditConfig, cluster *exten
 	}
 
 	for name, backend := range backends {
-		key := fmt.Sprintf("%s.backend.conf", name)
+		key := fmt.Sprintf("%s.backend.yaml", name)
 		fluentbitConfigMap.Data[key] = backend.FluentBitConfig(cluster).Generate()
 		backend.PatchAuditWebhook(auditwebhookStatefulSet)
 	}

@@ -65,7 +65,7 @@ const (
 )
 
 func (s Splunk) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Config {
-	splunkConfig := map[string]string{
+	splunkConfig := map[string]any{
 		"match":                    "audit",
 		"name":                     "splunk",
 		"retry_limit":              "no_limits", // let fluent-bit never discard any data
@@ -95,12 +95,14 @@ func (s Splunk) FluentBitConfig(cluster *extensions.Cluster) fluentbitconfig.Con
 
 	filters := []fluentbitconfig.Filter{}
 	if len(s.backend.CustomData) > 0 {
-		splunkConfigFilter := make(map[string]string, len(s.backend.CustomData)+2)
+		splunkConfigFilter := make(map[string]any, len(s.backend.CustomData)+2)
 		splunkConfigFilter["name"] = "modify"
 		splunkConfigFilter["match"] = "*"
+		addKeys := make([]string, 0, len(s.backend.CustomData))
 		for key, value := range s.backend.CustomData {
-			splunkConfigFilter["add "+key] = value
+			addKeys = append(addKeys, key+" "+value)
 		}
+		splunkConfigFilter["add"] = addKeys
 		filters = append(filters, splunkConfigFilter)
 	}
 	fluentbitBackendSplunk := fluentbitconfig.Config{

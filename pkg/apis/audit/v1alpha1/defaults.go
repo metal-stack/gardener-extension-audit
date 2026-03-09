@@ -33,6 +33,7 @@ func DefaultBackends(backends *AuditBackends) {
 	}
 
 	defaultBackendClusterForwarding(backends.ClusterForwarding)
+	defaultBackendOpenTelemetry(backends.OpenTelemetry)
 	defaultBackendSplunk(backends.Splunk)
 	defaultBackendS3(backends.S3)
 }
@@ -44,6 +45,20 @@ func defaultBackendClusterForwarding(backend *AuditBackendClusterForwarding) {
 
 	if backend.FilesystemBufferSize == nil {
 		backend.FilesystemBufferSize = pointer.Pointer("900M")
+	}
+}
+
+func defaultBackendOpenTelemetry(backend *AuditBackendOpenTelemetry) {
+	if backend == nil {
+		return
+	}
+
+	if backend.FilesystemBufferSize == nil {
+		backend.FilesystemBufferSize = pointer.Pointer("900M")
+	}
+
+	if backend.TlsEnabled == nil {
+		backend.TlsEnabled = pointer.Pointer(true)
 	}
 }
 

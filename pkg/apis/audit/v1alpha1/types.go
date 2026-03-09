@@ -15,6 +15,8 @@ const (
 	AuditWebhookModeBlocking       AuditWebhookMode = "blocking"
 	AuditWebhookModeBlockingStrict AuditWebhookMode = "blocking-strict"
 
+	OpenTelemetrySecretTokenKey = "token"
+
 	SplunkSecretTokenKey  = "token"
 	SplunkSecretCaFileKey = "ca"
 
@@ -77,6 +79,10 @@ type AuditBackends struct {
 	// +optional
 	ClusterForwarding *AuditBackendClusterForwarding `json:"clusterForwarding,omitempty"`
 
+	// OpenTelemetry will forward the audit data to an OTLP-compatible endpoint.
+	// +optional
+	OpenTelemetry *AuditBackendOpenTelemetry `json:"openTelemetry,omitempty"`
+
 	// Splunk will forward the audit data to a splunk HEC endpoint.
 	// +optional
 	Splunk *AuditBackendSplunk `json:"splunk,omitempty"`
@@ -93,7 +99,6 @@ type AuditBackends struct {
 	// - Forward
 	// - Loki
 	// - Elasticsearch
-	// - Forward
 	// - Kafka
 }
 
@@ -110,6 +115,53 @@ type AuditBackendClusterForwarding struct {
 	// +optional
 	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
 }
+
+type AuditBackendOpenTelemetry struct {
+	// Enabled allows to turn this backend on.
+	Enabled bool `json:"enabled"`
+
+	// FilesystemBufferSize is the maximum disk space for the fluent-bit file system buffer.
+	// +optional
+	FilesystemBufferSize *string `json:"bufferSize,omitempty"`
+
+	// Host is the hostname or IP of the OTLP endpoint.
+	Host string `json:"host"`
+
+	// Port is the port on which the OTLP endpoint is listening.
+	Port string `json:"port"`
+
+	// TlsEnabled determines whether TLS should be used to communicate to the OTLP endpoint.
+	TlsEnabled *bool `json:"tls,omitempty"`
+
+	// TlsHost is the hostname that fluent-bit should request through SNI when connecting to a site that serves different hostnames under one IP.
+	TlsHost string `json:"tlshost,omitempty"`
+
+	// Attributes contains a map of custom key/value pairs. The attributes are added to each individual log message.
+	// The keys may only contain letters, numbers, '_' or '.'. Empty keys are also not accepted.
+	Attributes map[string]string `json:"attributes,omitempty"`
+
+	// AuditIDAttribute specifies the name of an attribute into which to copy the `auditID` set by Kubernetes.
+	// Copying only happens if the field is set.
+	// +optional
+	AuditIDAttribute string `json:"auditIDAttribute,omitempty"`
+
+	// BatchSize specifies the maximum number of log records to be flushed at once.
+	// +optional
+	BatchSize *int `json:"batchSize,omitempty"`
+
+	// BearerToken specify the token to use for authenticating to the OTLP endpoint.
+	BearerToken AuditBackendOpenTelemetryBearerToken `json:"bearerToken,omitempty"`
+}
+
+type AuditBackendOpenTelemetryBearerToken struct {
+	// SecretResourceName is a reference under Shoot.spec.resources to the secret used to authenticate against the OTLP backend.
+	//
+	// The referenced secret may contain the following keys:
+	//
+	// - token: Required, bearer token to authenticate against OTLP endpoint
+	SecretResourceName string `json:"secretResourceName"`
+}
+
 type AuditBackendSplunk struct {
 	// Enabled allows to turn this backend on.
 	Enabled bool `json:"enabled"`
