@@ -23,7 +23,7 @@ type (
 	Include string
 )
 
-type yamlConfig struct {
+type YamlConfig struct {
 	Service  Service `yaml:"service,omitempty"`
 	Pipeline struct {
 		Input  []Input  `yaml:"inputs,omitempty"`
@@ -34,7 +34,7 @@ type yamlConfig struct {
 }
 
 func (c Config) Generate() string {
-	yc := yamlConfig{
+	yc := YamlConfig{
 		Service:  c.Service,
 		Includes: c.Includes,
 	}
@@ -49,4 +49,10 @@ func (c Config) Generate() string {
 	}
 
 	return strings.TrimSpace(string(out))
+}
+
+func ParseConfig(config string) (YamlConfig, error) {
+	var yc YamlConfig
+	err := yaml.Unmarshal([]byte(config), &yc)
+	return yc, err
 }
