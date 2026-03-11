@@ -23,14 +23,14 @@ const (
 )
 
 type CustomForwarding struct {
-	outputConfig map[string]string
+	outputConfig map[string]any
 	secret       *corev1.Secret
 }
 
 func NewCustomForwarding(outputConfig *corev1.ConfigMap) (CustomForwarding, error) {
-	configString, ok := outputConfig.Data["fluent-bit-output.conf"]
+	configString, ok := outputConfig.Data["fluent-bit-output.yaml"]
 	if !ok {
-		return CustomForwarding{}, fmt.Errorf("missing 'fluent-bit-output.conf' key in ConfigMap")
+		return CustomForwarding{}, fmt.Errorf("missing 'fluent-bit-output.yaml' key in ConfigMap")
 	}
 
 	config, err := parseFluentBitOutput(configString)
@@ -45,48 +45,22 @@ func (c *CustomForwarding) SetSecret(secret *corev1.Secret) {
 	c.secret = secret
 }
 
-func parseFluentBitOutput(config string) (map[string]string, error) {
-	lines := strings.Split(config, "\n")
-
-	if len(lines) == 1 && lines[0] == "" {
+func parseFluentBitOutput(config string) (map[string]any, error) {
+	if strings.TrimSpace(config) == "" {
 		return nil, fmt.Errorf("empty configuration")
 	}
 
-	// Find [OUTPUT] section
-	hasOutputSection := false
-	for _, line := range lines {
-		if strings.Contains(strings.TrimSpace(line), "[OUTPUT]") {
-			hasOutputSection = true
-			break
-		}
+	parsed, err := fluentbitconfig.ParseConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	if !hasOutputSection {
-		return nil, fmt.Errorf("missing [OUTPUT] section in configuration")
+	if len(parsed.Pipeline.Output) == 0 {
+		return nil, fmt.Errorf("missing output section in configuration")
+	} else if len(parsed.Pipeline.Output) > 1 {
+		return nil, fmt.Errorf("more than one output section in configuration")
 	}
-
-	result := make(map[string]string)
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "[") {
-			// ignore empty lines or section headers
-			continue
-		}
-
-		// split the line into key/value
-		parts := strings.Fields(line)
-		if len(parts) >= 2 {
-			key := parts[0]
-			value := strings.Join(parts[1:], " ")
-			result[key] = value
-		}
-	}
-
-	if len(result) == 0 {
-		return nil, fmt.Errorf("no valid key-value pairs found in configuration")
-	}
-
-	return result, nil
+	return parsed.Pipeline.Output[0], nil
 }
 
 // isValidCertificate checks if the provided data contains a valid PEM-encoded certificate
