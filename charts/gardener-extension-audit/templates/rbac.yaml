@@ -90,7 +90,6 @@ rules:
   - leases
   verbs:
   - create
-  - update
   - list
   - watch
 - apiGroups:
@@ -99,9 +98,11 @@ rules:
   - leases
   resourceNames:
   - extension-audit-leader-election
+  - gardener-extension-heartbeat
   verbs:
-  - update
   - get
+  - update
+  - patch
 # dns records seem to be a regression?
 - apiGroups:
   - extensions.gardener.cloud

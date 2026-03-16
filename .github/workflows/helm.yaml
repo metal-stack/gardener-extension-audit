@@ -22,7 +22,7 @@ jobs:
 
     steps:
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
 
         - name: Make tag
           run: |
@@ -32,7 +32,7 @@ jobs:
 
         - name: Docker meta
           id: meta
-          uses: docker/metadata-action@v5
+          uses: docker/metadata-action@v6
           with:
             images: |
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -47,7 +47,7 @@ jobs:
         # we can replace this with the helm/chart-releaser-action after
         # https://github.com/helm/chart-releaser-action/issues/107 was resolved
         - name: Release Helm OCI Artifact
-          uses: appany/helm-oci-chart-releaser@v0.4.2
+          uses: appany/helm-oci-chart-releaser@v0.5.0
           with:
             name: ${{ github.event.repository.name }}
             repository: ${{ github.repository_owner }}/charts

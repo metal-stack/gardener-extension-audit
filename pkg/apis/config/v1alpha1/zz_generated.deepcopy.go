@@ -34,6 +34,11 @@ func (in *ControllerConfiguration) DeepCopyInto(out *ControllerConfiguration) {
 		*out = new(configv1alpha1.HealthCheckConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.AllowCustomBackends != nil {
+		in, out := &in.AllowCustomBackends, &out.AllowCustomBackends
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

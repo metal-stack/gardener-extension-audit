@@ -1,10 +1,8 @@
 package v1alpha1
 
 import (
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -22,7 +20,7 @@ func SetDefaults_AuditPersistence(persistence *AuditPersistence) {
 // SetDefaults_AuditConfig sets the defaults for the AuditConfig configuration
 func SetDefaults_AuditConfig(a *AuditConfig) {
 	if a.Replicas == nil {
-		a.Replicas = pointer.Pointer(int32(2))
+		a.Replicas = new(int32(2))
 	}
 
 	DefaultBackends(a.Backends)
@@ -46,7 +44,7 @@ func defaultBackendClusterForwarding(backend *AuditBackendClusterForwarding) {
 	}
 
 	if backend.FilesystemBufferSize == nil {
-		backend.FilesystemBufferSize = pointer.Pointer("900M")
+		backend.FilesystemBufferSize = new("900M")
 	}
 }
 
@@ -56,7 +54,7 @@ func defaultBackendSplunk(backend *AuditBackendSplunk) {
 	}
 
 	if backend.FilesystemBufferSize == nil {
-		backend.FilesystemBufferSize = pointer.Pointer("900M")
+		backend.FilesystemBufferSize = new("900M")
 	}
 }
 
@@ -66,27 +64,27 @@ func defaultBackendS3(backend *AuditBackendS3) {
 	}
 
 	if backend.FilesystemBufferSize == nil {
-		backend.FilesystemBufferSize = pointer.Pointer("900M")
+		backend.FilesystemBufferSize = new("900M")
 	}
 
 	if backend.TlsEnabled == nil {
-		backend.TlsEnabled = pointer.Pointer(true)
+		backend.TlsEnabled = new(true)
 	}
 
 	if backend.TotalFileSize == nil {
-		backend.TotalFileSize = pointer.Pointer("100M")
+		backend.TotalFileSize = new("100M")
 	}
 
 	if backend.UploadTimeout == nil {
-		backend.UploadTimeout = pointer.Pointer("10m")
+		backend.UploadTimeout = new("10m")
 	}
 
 	if backend.Prefix == nil {
-		backend.Prefix = pointer.Pointer("/audit-logs")
+		backend.Prefix = new("/audit-logs")
 	}
 
 	if backend.S3KeyFormat == nil {
-		backend.S3KeyFormat = pointer.Pointer("/%Y/%m/%d/%H/%M/%S/$UUID")
+		backend.S3KeyFormat = new("/%Y/%m/%d/%H/%M/%S/$UUID")
 	}
 }
 
@@ -97,6 +95,6 @@ func DefaultMessages(messages *AuditMessages) {
 
 	// Set default maximum event size
 	if messages.MaxEventSize == nil {
-		messages.MaxEventSize = ptr.To(AuditLogMaximumSizeEvent)
+		messages.MaxEventSize = new(AuditLogMaximumSizeEvent)
 	}
 }
