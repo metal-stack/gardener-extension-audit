@@ -144,8 +144,9 @@ func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha
 	// the request and response object are dropped. The request metadata and objectRef
 	// are still kept. As etcd defaults to a maximum request size of 1.5MB, the overall
 	// audit log entry should stay below that limit as well.
-	batchSizeLimit := fmt.Sprintf("%v", v1alpha1.AuditLogMaximumSizeEvent-v1alpha1.AuditLogEventBuffer)
-	eventSizeLimit := fmt.Sprintf("%v", *maxEventSize-v1alpha1.AuditLogEventBuffer)
+	batchSizeLimit := fmt.Sprintf("%d", v1alpha1.AuditLogMaximumSizeEvent-v1alpha1.AuditLogEventBuffer)
+	eventSizeLimit := fmt.Sprintf("%d", *maxEventSize-v1alpha1.AuditLogEventBuffer)
+
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-enabled=", "true")
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-batch-size=", batchSizeLimit)
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-event-size=", eventSizeLimit)
