@@ -64,7 +64,7 @@ func validateS3Secret(secret *corev1.Secret) error {
 }
 
 func (s S3) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
-	s3Config := map[string]string{
+	s3Config := map[string]any{
 		"match":                "audit",
 		"name":                 "s3",
 		"retry_limit":          "no_limits", // Let FluentBit only discard data if store_dir_limit_size is reached
@@ -75,13 +75,14 @@ func (s S3) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
 		"use_put_object":       "On",
 	}
 
+	var s3KeyFormat string
 	if s.backend.S3KeyFormat != nil {
-		s3Config["s3_key_format"] = *s.backend.S3KeyFormat
+		s3KeyFormat = *s.backend.S3KeyFormat
 	}
-
 	if s.backend.Prefix != nil {
-		s3Config["s3_key_format"] = path.Join(*s.backend.Prefix, s3Config["s3_key_format"])
+		s3KeyFormat = path.Join(*s.backend.Prefix, s3KeyFormat)
 	}
+	s3Config["s3_key_format"] = s3KeyFormat
 
 	if s.backend.Endpoint != nil {
 		s3Config["endpoint"] = *s.backend.Endpoint

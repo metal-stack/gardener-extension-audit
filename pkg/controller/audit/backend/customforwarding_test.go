@@ -20,19 +20,20 @@ func Test_parseFluentBitOutput(t *testing.T) {
 	tt := []struct {
 		desc           string
 		input          string
-		expected       map[string]string
+		expected       map[string]any
 		assertionError func(*testing.T, error)
 	}{
 		{
 			desc: "valid output config s3",
-			input: `[OUTPUT]
-				Name  s3
-				Match *
-				bucket my-bucket
-				region us-west-2`,
-			expected: map[string]string{
-				"Name":   "s3",
-				"Match":  "*",
+			input: `pipeline:
+  outputs:
+    - name: s3
+      match: "*"
+      bucket: my-bucket
+      region: us-west-2`,
+			expected: map[string]any{
+				"name":   "s3",
+				"match":  "*",
 				"bucket": "my-bucket",
 				"region": "us-west-2",
 			},
@@ -42,11 +43,12 @@ func Test_parseFluentBitOutput(t *testing.T) {
 		},
 		{
 			desc: "valid output config loki",
-			input: `[OUTPUT]
-			    name   loki
-			    match  *
-			    labels job=fluentbit, $sub['stream']`,
-			expected: map[string]string{
+			input: `pipeline:
+  outputs:
+    - name: loki
+      match: "*"
+      labels: "job=fluentbit, $sub['stream']"`,
+			expected: map[string]any{
 				"name":   "loki",
 				"match":  "*",
 				"labels": "job=fluentbit, $sub['stream']",
@@ -57,15 +59,15 @@ func Test_parseFluentBitOutput(t *testing.T) {
 		},
 		{
 			desc: "valid output config with comments",
-			input: `[OUTPUT]
-			    # this is a comment in a new line
-			    name   loki
-			    match  * # this is a comment inline
-			    labels job=fluentbit, $sub['stream']`,
-			expected: map[string]string{
-				"#":      "this is a comment in a new line",
+			input: `pipeline:
+  outputs:
+    # this is a comment in a new line
+    - name: loki
+      match: "*" # this is a comment inline
+      labels: "job=fluentbit, $sub['stream']"`,
+			expected: map[string]any{
 				"name":   "loki",
-				"match":  "* # this is a comment inline",
+				"match":  "*",
 				"labels": "job=fluentbit, $sub['stream']",
 			},
 			assertionError: func(t *testing.T, err error) {
@@ -74,14 +76,33 @@ func Test_parseFluentBitOutput(t *testing.T) {
 		},
 		{
 			desc: "missing OUTPUT section",
-			input: `Name  s3
-				Match *
-				bucket my-bucket
-				region us-west-2`,
+			input: `pipeline:
+  outputs:`,
 			expected: nil,
 			assertionError: func(t *testing.T, err error) {
 				require.Error(t, err)
-				assert.ErrorContains(t, err, "missing [OUTPUT] section")
+				assert.ErrorContains(t, err, "missing output section")
+			},
+		},
+		{
+			desc: "multiple output sections",
+			input: `pipeline:
+  outputs:
+    - name: null
+    - name: null`,
+			expected: nil,
+			assertionError: func(t *testing.T, err error) {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, "more than one output section in configuration")
+			},
+		},
+		{
+			desc:     "invalid configuration",
+			input:    `[OUTPUT]`,
+			expected: nil,
+			assertionError: func(t *testing.T, err error) {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, "invalid configuration")
 			},
 		},
 		{
