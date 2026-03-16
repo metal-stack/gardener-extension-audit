@@ -102,7 +102,7 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 	ps := &template.Spec
 	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-apiserver"); c != nil {
 		e.logger.Info("ensuring kube-apiserver deployment")
-		ensureKubeAPIServerCommandLineArgs(c, webhookMode, auditConfig.Messages.MaxEventSize)
+		ensureKubeAPIServerCommandLineArgs(c, webhookMode, pointer.SafeDeref(auditConfig.Messages).MaxEventSize)
 		ensureVolumeMounts(c)
 		ensureVolumes(ps)
 	}
