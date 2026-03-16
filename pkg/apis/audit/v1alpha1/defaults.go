@@ -4,6 +4,7 @@ import (
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -25,6 +26,8 @@ func SetDefaults_AuditConfig(a *AuditConfig) {
 	}
 
 	DefaultBackends(a.Backends)
+
+	DefaultMessages(a.Messages)
 }
 
 func DefaultBackends(backends *AuditBackends) {
@@ -84,5 +87,16 @@ func defaultBackendS3(backend *AuditBackendS3) {
 
 	if backend.S3KeyFormat == nil {
 		backend.S3KeyFormat = pointer.Pointer("/%Y/%m/%d/%H/%M/%S/$UUID")
+	}
+}
+
+func DefaultMessages(messages *AuditMessages) {
+	if messages == nil {
+		return
+	}
+
+	// Set default maximum event size
+	if messages.MaxEventSize == nil {
+		messages.MaxEventSize = ptr.To(AuditLogMaximumSizeEvent)
 	}
 }

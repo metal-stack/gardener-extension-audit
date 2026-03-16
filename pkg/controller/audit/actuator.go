@@ -71,6 +71,11 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 		}
 	}
 
+	err := auditConfig.Validate()
+	if err != nil {
+		return fmt.Errorf("error while validating provided 'AuditConfig': %w", err)
+  }
+  
 	if err := a.validateCustomBackends(auditConfig.Backends); err != nil {
 		return err
 	}
