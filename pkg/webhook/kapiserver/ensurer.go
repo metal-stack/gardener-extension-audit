@@ -99,7 +99,7 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 	}
 
 	maxEventSize := v1alpha1.AuditLogMaximumSizeEvent
-	if auditConfig != nil && auditConfig.Messages != nil && auditConfig.Messages.MaxEventSize != nil {
+	if auditConfig.Messages != nil && auditConfig.Messages.MaxEventSize != nil {
 		maxEventSize = *auditConfig.Messages.MaxEventSize
 	}
 
