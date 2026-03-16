@@ -98,11 +98,16 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 		}
 	}
 
+	maxEventSize := v1alpha1.AuditLogMaximumSizeEvent
+	if auditConfig != nil && auditConfig.Messages != nil && auditConfig.Messages.MaxEventSize != nil {
+		maxEventSize = *auditConfig.Messages.MaxEventSize
+	}
+
 	template := &new.Spec.Template
 	ps := &template.Spec
 	if c := extensionswebhook.ContainerWithName(ps.Containers, "kube-apiserver"); c != nil {
 		e.logger.Info("ensuring kube-apiserver deployment")
-		ensureKubeAPIServerCommandLineArgs(c, webhookMode, pointer.SafeDeref(auditConfig.Messages).MaxEventSize)
+		ensureKubeAPIServerCommandLineArgs(c, webhookMode, maxEventSize)
 		ensureVolumeMounts(c)
 		ensureVolumes(ps)
 	}
@@ -131,7 +136,7 @@ func ensureVolumes(ps *corev1.PodSpec) {
 	})
 }
 
-func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha1.AuditWebhookMode, maxEventSize *int) {
+func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha1.AuditWebhookMode, maxEventSize int) {
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-config-file=", "/etc/audit-webhook/config/audit-webhook-config.yaml")
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-mode=", string(webhookMode))
 
@@ -145,7 +150,7 @@ func ensureKubeAPIServerCommandLineArgs(c *corev1.Container, webhookMode v1alpha
 	// are still kept. As etcd defaults to a maximum request size of 1.5MB, the overall
 	// audit log entry should stay below that limit as well.
 	batchSizeLimit := fmt.Sprintf("%d", v1alpha1.AuditLogMaximumSizeEvent-v1alpha1.AuditLogEventBuffer)
-	eventSizeLimit := fmt.Sprintf("%d", *maxEventSize-v1alpha1.AuditLogEventBuffer)
+	eventSizeLimit := fmt.Sprintf("%d", maxEventSize-v1alpha1.AuditLogEventBuffer)
 
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-enabled=", "true")
 	c.Command = extensionswebhook.EnsureStringWithPrefix(c.Command, "--audit-webhook-truncate-max-batch-size=", batchSizeLimit)
