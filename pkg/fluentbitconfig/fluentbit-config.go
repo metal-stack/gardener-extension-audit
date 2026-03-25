@@ -1,9 +1,9 @@
 package fluentbitconfig
 
 import (
-	"bytes"
 	"strings"
-	"text/template"
+
+	"gopkg.in/yaml.v3"
 )
 
 type (
@@ -17,48 +17,42 @@ type (
 
 	Service map[string]string
 	Input   map[string]string
-	Filter  map[string]string
-	Output  map[string]string
+	// some filter attributes must be passed as a list such that "string" is not sufficient
+	Filter  map[string]any
+	Output  map[string]any
 	Include string
 )
 
-var t = func() *template.Template {
-	t, err := template.New("").Funcs(template.FuncMap{
-		"trim": strings.TrimSpace,
-	}).Parse(`
-{{ if .Service }}
-[SERVICE]
-{{- range $key, $value := .Service }}
-    {{ $key | trim }} {{ $value | trim }}{{ end }}{{ end }}
-{{ range $input := .Input }}
-[INPUT]
-{{- range $key, $value := $input }}
-    {{ $key | trim }} {{ $value | trim }}{{ end }}{{ end }}
-{{ range $filter := .Filter }}
-[FILTER]
-{{- range $key, $value := $filter }}
-    {{ $key | trim }} {{ $value | trim }}{{ end }}{{ end }}
-{{ range $output := .Output }}
-[OUTPUT]
-{{- range $key, $value := $output }}
-    {{ $key | trim }} {{ $value | trim }}{{ end }}{{ end }}
-
-{{ range $include := .Includes }}@INCLUDE {{ $include }}{{ end }}
-`)
-	if err != nil {
-		panic(err)
-	}
-
-	return t
-}()
+type YamlConfig struct {
+	Service  Service `yaml:"service,omitempty"`
+	Pipeline struct {
+		Input  []Input  `yaml:"inputs,omitempty"`
+		Filter []Filter `yaml:"filters,omitempty"`
+		Output []Output `yaml:"outputs,omitempty"`
+	} `yaml:"pipeline"`
+	Includes []Include `yaml:"includes,omitempty"`
+}
 
 func (c Config) Generate() string {
-	var buf bytes.Buffer
-	err := t.Execute(&buf, c)
+	yc := YamlConfig{
+		Service:  c.Service,
+		Includes: c.Includes,
+	}
+	yc.Pipeline.Input = c.Input
+	yc.Pipeline.Filter = c.Filter
+	yc.Pipeline.Output = c.Output
+
+	out, err := yaml.Marshal(yc)
 	if err != nil {
 		// as this function is tested, this should never happen...
 		panic(err)
 	}
 
-	return strings.TrimSpace(buf.String())
+	return strings.TrimSpace(string(out))
+}
+
+func ParseConfig(config string) (YamlConfig, error) {
+	var yc YamlConfig
+	err := yaml.Unmarshal([]byte(config), &yc)
+	return yc, err
 }

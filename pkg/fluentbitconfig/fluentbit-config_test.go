@@ -28,55 +28,54 @@ func TestConfig_Generate(t *testing.T) {
 					{
 						"name":  "modify",
 						"match": "*",
-						"add":   "cluster devcluster",
+						"add":   []string{"cluster devcluster"},
 					},
 				},
 				Output: []Output{
-					map[string]string{
+					map[string]any{
 						"name":  "    stdout  ",
 						"match": "*",
 					},
-					map[string]string{
+					map[string]any{
 						"name": "null",
 					},
 				},
 				Includes: []Include{
-					"data/*.conf",
+					"data/*.yaml",
 				},
 			},
-			want: `[SERVICE]
-    flush 1
-    log_level info
-
-[INPUT]
-    name http
-
-[FILTER]
-    add cluster devcluster
-    match *
-    name modify
-
-[OUTPUT]
-    match *
-    name stdout
-[OUTPUT]
-    name null
-
-@INCLUDE data/*.conf`,
+			want: `service:
+    flush: "1"
+    log_level: info
+pipeline:
+    inputs:
+        - name: http
+    filters:
+        - add:
+            - cluster devcluster
+          match: '*'
+          name: modify
+    outputs:
+        - match: '*'
+          name: '    stdout  '
+        - name: "null"
+includes:
+    - data/*.yaml`,
 		},
 		{
 			name: "only output section",
 			config: &Config{
 				Output: []Output{
-					map[string]string{
+					map[string]any{
 						"name":  "stdout",
 						"match": "*",
 					},
 				},
 			},
-			want: `[OUTPUT]
-    match *
-    name stdout`,
+			want: `pipeline:
+    outputs:
+        - match: '*'
+          name: stdout`,
 		},
 	}
 	for _, tt := range tests {

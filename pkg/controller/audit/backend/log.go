@@ -12,7 +12,7 @@ type Log struct{}
 func (l Log) FluentBitConfig(*extensions.Cluster) fluentbitconfig.Config {
 	return fluentbitconfig.Config{
 		Output: []fluentbitconfig.Output{
-			map[string]string{
+			map[string]any{
 				"match":                    "audit",
 				"name":                     "stdout",
 				"retry_limit":              "no_limits", // let fluent-bit never discard any data

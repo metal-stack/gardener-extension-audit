@@ -26,8 +26,10 @@ func Test_SplunkFluentBitConfig(t *testing.T) {
 			assertion: func(t *testing.T, c fluentbitconfig.Config) {
 				assert.Len(t, c.Filter, 1)
 				f := c.Filter[0]
-				assert.Contains(t, f, "add key1")
-				assert.Contains(t, f, "add key2")
+				assert.IsType(t, []string{}, f["add"])
+				addList := f["add"].([]string)
+				assert.Contains(t, addList, "key1 value1")
+				assert.Contains(t, addList, "key2 value2")
 			},
 		},
 		{
