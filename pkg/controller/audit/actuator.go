@@ -150,6 +150,20 @@ func (a *actuator) shootBackends(ctx context.Context, cluster *extensions.Cluste
 		backendMap["cluster-forwarding"] = clusterForwardingBackend
 	}
 
+	if pointer.SafeDeref(backends.OpenTelemetry).Enabled {
+		bearerTokenSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.OpenTelemetry.BearerToken.SecretResourceName)
+		if err != nil {
+			return nil, err
+		}
+
+		openTelemetryBackend, err := backend.NewOpenTelemetry(backends.OpenTelemetry, bearerTokenSecret)
+		if err != nil {
+			return nil, fmt.Errorf("error creating opentelemetry backend: %w", err)
+		}
+
+		backendMap["opentelemetry"] = openTelemetryBackend
+	}
+
 	if pointer.SafeDeref(backends.Splunk).Enabled {
 		splunkSecret, err := a.findBackendSecret(ctx, cluster, secrets, backends.Splunk.SecretResourceName)
 		if err != nil {
