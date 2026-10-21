@@ -82,14 +82,15 @@ func (o *Options) run(ctx context.Context) error {
 	ctrlConfig := o.auditOptions.Completed()
 	ctrlConfig.Apply(&audit.DefaultAddOptions.Config)
 	o.controllerOptions.Completed().Apply(&audit.DefaultAddOptions.ControllerOptions)
-	o.reconcileOptions.Completed().Apply(&audit.DefaultAddOptions.IgnoreOperationAnnotation, &audit.DefaultAddOptions.ExtensionClass)
+	o.reconcileOptions.Completed().Apply(&audit.DefaultAddOptions.IgnoreOperationAnnotation)
+	audit.DefaultAddOptions.ExtensionClasses = o.generalOptions.Completed().ExtensionClasses
 	o.heartbeatOptions.Completed().Apply(&heartbeatcontroller.DefaultAddOptions)
 
 	if err := o.controllerSwitches.Completed().AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("could not add controllers to manager: %w", err)
 	}
 
-	if _, err := o.webhookOptions.Completed().AddToManager(ctx, mgr, nil, o.generalOptions.Completed().SelfHostedShootCluster); err != nil {
+	if _, err := o.webhookOptions.Completed().AddToManager(ctx, mgr, nil); err != nil {
 		return fmt.Errorf("could not add the mutating webhook to manager: %w", err)
 	}
 

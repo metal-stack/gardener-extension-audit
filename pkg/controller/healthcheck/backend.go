@@ -14,6 +14,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,13 +27,13 @@ type retryMap map[string]outputRetries
 type outputRetries map[string]int
 
 type BackendHealthChecker struct {
-	logger     logr.Logger
-	httpClient *http.Client
-	retries    retryMap
-	mutex      sync.Mutex
-	backoff    map[string]time.Time
-	syncPeriod time.Duration
-	seedClient client.Client
+	logger       logr.Logger
+	httpClient   *http.Client
+	retries      retryMap
+	mutex        sync.Mutex
+	backoff      map[string]time.Time
+	syncPeriod   time.Duration
+	sourceClient client.Client
 }
 
 func backendHealth(syncPeriod time.Duration) healthcheck.HealthCheck {
@@ -44,25 +45,14 @@ func backendHealth(syncPeriod time.Duration) healthcheck.HealthCheck {
 	}
 }
 
-// InjectSeedClient injects the seed client
-func (h *BackendHealthChecker) InjectSeedClient(seedClient client.Client) {
-	h.seedClient = seedClient
+// InjectSourceClient injects the seed client. The gardener health check actuator only calls this
+// method if it matches the healthcheck.SourceClient interface.
+func (h *BackendHealthChecker) InjectSourceClient(sourceClient client.Client) {
+	h.sourceClient = sourceClient
 }
 
 func (h *BackendHealthChecker) SetLoggerSuffix(provider, extension string) {
-	h.logger = h.logger.WithName(fmt.Sprintf("%s-%s-healthcheck-backend", provider, extension))
-}
-
-func (h *BackendHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	return &BackendHealthChecker{
-		logger:     h.logger,
-		httpClient: h.httpClient,
-		retries:    h.retries,
-		mutex:      sync.Mutex{},
-		backoff:    h.backoff,
-		syncPeriod: h.syncPeriod,
-		seedClient: h.seedClient,
-	}
+	h.logger = log.Log.WithName(fmt.Sprintf("%s-%s-healthcheck-backend", provider, extension))
 }
 
 func (h *BackendHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
@@ -81,10 +71,12 @@ func (h *BackendHealthChecker) Check(ctx context.Context, request types.Namespac
 
 func (h *BackendHealthChecker) check(ctx context.Context, namespace string) error {
 	if err := h.checkHealthEndpoint(ctx, namespace); err != nil {
+		h.logger.Error(err, "Backend health endpoint check failed", "namespace", namespace)
 		return err
 	}
 
 	if err := h.checkRetries(ctx, namespace); err != nil {
+		h.logger.Error(err, "Backend retries check failed", "namespace", namespace)
 		return err
 	}
 
@@ -116,8 +108,12 @@ func (h *BackendHealthChecker) checkRetries(ctx context.Context, namespace strin
 	// as retries are set to no_limits, fluent-bit does not count unreachable backends as errors or retry_errors
 	// therefore, we need to check if there were any retries during the last health check
 
+	if h.sourceClient == nil {
+		return fmt.Errorf("unable to check retries: source client is not injected into the backend health checker")
+	}
+
 	endpointSliceList := &discoveryv1.EndpointSliceList{}
-	err := h.seedClient.List(ctx, endpointSliceList, client.MatchingLabels{
+	err := h.sourceClient.List(ctx, endpointSliceList, client.MatchingLabels{
 		"kubernetes.io/service-name": "audit-webhook-backend",
 	}, client.InNamespace(namespace))
 	if err != nil {
