@@ -13,7 +13,7 @@ IGNORE_OPERATION_ANNOTATION := false
 WEBHOOK_CONFIG_URL          := localhost
 
 GOLANGCI_LINT_VERSION := v2.10.1
-GO_VERSION := 1.26
+GO_VERSION := 1.27
 
 ifeq ($(CI),true)
   DOCKER_TTY_ARG=""
@@ -67,12 +67,12 @@ clean:
 
 .PHONY: check-generate
 check-generate:
-	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/check-generate.sh $(REPO_ROOT)
+	@bash $(GARDENER_HACK_DIR)/check-generate.sh $(REPO_ROOT)
 
 .PHONY: generate
-generate: $(VGOPATH) $(HELM) $(YQ)
+generate: $(HELM) $(YQ)
 	echo $(shell git -c safe.directory=/go/src/github.com/metal-stack/gardener-extension-audit describe --abbrev=0 --tags) > VERSION
-	@REPO_ROOT=$(REPO_ROOT) VGOPATH=$(VGOPATH) GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) bash $(GARDENER_HACK_DIR)/generate-sequential.sh ./charts/... ./cmd/... ./pkg/...
+	@REPO_ROOT=$(REPO_ROOT) GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) bash $(GARDENER_HACK_DIR)/generate-sequential.sh ./charts/... ./cmd/... ./pkg/...
 
 .PHONY: generate-in-docker
 generate-in-docker: tidy install $(HELM) $(YQ)
