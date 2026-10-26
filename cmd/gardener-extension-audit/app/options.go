@@ -29,6 +29,8 @@ type Options struct {
 
 // NewOptions creates a new Options instance.
 func NewOptions() *Options {
+	generalOptions := &controllercmd.GeneralOptions{}
+
 	// options for the webhook server
 	webhookServerOptions := &webhookcmd.ServerOptions{
 		Namespace: os.Getenv("WEBHOOK_CONFIG_NAMESPACE"),
@@ -39,12 +41,13 @@ func NewOptions() *Options {
 		"audit",
 		"",
 		nil,
+		generalOptions,
 		webhookServerOptions,
 		webhookSwitches,
 	)
 
 	options := &Options{
-		generalOptions: &controllercmd.GeneralOptions{},
+		generalOptions: generalOptions,
 		auditOptions:   &auditcmd.AuditOptions{},
 		restOptions:    &controllercmd.RESTOptions{},
 		managerOptions: &controllercmd.ManagerOptions{

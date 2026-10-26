@@ -46,7 +46,6 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 
 	webhook := &extensionswebhook.Webhook{
 		Name:              "kapiserver",
-		Provider:          "",
 		Types:             types,
 		Target:            extensionswebhook.TargetSeed,
 		Path:              "kapiserver",

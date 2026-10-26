@@ -48,7 +48,7 @@ func TestBackendHealthChecker_checkRetries(t *testing.T) {
 		httpClient: newFakeClient(http.StatusOK, body1),
 		retries:    retryMap{},
 		backoff:    map[string]time.Time{},
-		seedClient: fake.NewClientBuilder().WithLists(&discoveryv1.EndpointSliceList{
+		sourceClient: fake.NewClientBuilder().WithLists(&discoveryv1.EndpointSliceList{
 			Items: []discoveryv1.EndpointSlice{
 				{
 					ObjectMeta: metav1.ObjectMeta{
