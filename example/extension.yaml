@@ -1,0 +1,23 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: audit
+spec:
+  deployment:
+    extension:
+      helm:
+        ociRepository:
+          ref: ghcr.io/metal-stack/charts/gardener-extension-audit:latest
+      runtimeClusterValues:
+        image:
+          pullPolicy: Always
+          repository: ghcr.io/metal-stack/gardener-extension-audit
+          tag: latest
+  resources:
+  - kind: Extension
+    lifecycle:
+      delete: BeforeKubeAPIServer
+      migrate: BeforeKubeAPIServer
+      reconcile: BeforeKubeAPIServer
+    primary: true
+    type: audit
