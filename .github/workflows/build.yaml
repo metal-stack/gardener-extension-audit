@@ -44,6 +44,13 @@ jobs:
         id: tags
         uses: metal-stack/actions-common/.github/actions/push-tags@v1
 
+      - name: Registry login
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build hub artifacts
         uses: matthias-horne/gardener-extension-example/.github/actions/compatibility@composite-action
         with:
