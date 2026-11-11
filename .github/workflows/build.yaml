@@ -29,3 +29,20 @@ jobs:
     with:
       chart-path: charts/${{ github.event.repository.name }}
       container-image-values-patch: image.tag
+
+
+  extension-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Make tags
+        id: tags
+        uses: metal-stack/actions-common/.github/actions/push-tags@v1
+
+      - name: Build hub artifacts
+        uses: matthias-horne/gardener-extension-example/.github/actions/compatibility@composite-action
+        with:
+          chart-ref: ghcr.io/${{ github.repository_owner }}/charts/${{ github.event.repository.name }}:${{ steps.tags.outputs.helm_tag }}
+          extension-ref: ghcr.io/${{ github.repository_owner }}/extensions/${{ github.event.repository.name }}:${{ steps.tags.outputs.container_tag }}
