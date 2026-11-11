@@ -30,7 +30,6 @@ jobs:
       chart-path: charts/${{ github.event.repository.name }}
       container-image-values-patch: image.tag
 
-
   extension-hub:
     runs-on: ubuntu-latest
     permissions:
