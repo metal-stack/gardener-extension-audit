@@ -56,3 +56,5 @@ jobs:
         with:
           chart-ref: ghcr.io/${{ github.repository_owner }}/charts/${{ github.event.repository.name }}:${{ steps.tags.outputs.helm_tag }}
           extension-ref: ghcr.io/${{ github.repository_owner }}/extensions/${{ github.event.repository.name }}:${{ steps.tags.outputs.container_tag }}
+          image-repository: ghcr.io/${{ github.repository }}
+          image-tag: ${{ steps.tags.outputs.container_tag }}
