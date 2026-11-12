@@ -17,14 +17,14 @@ jobs:
     uses: metal-stack/actions-common/.github/workflows/release-drafter.yaml@v1
 
   go-build:
-    uses: metal-stack/actions-common/.github/workflows/go-build.yaml@outputs
+    uses: metal-stack/actions-common/.github/workflows/go-build.yaml@v1
     secrets: inherit
     with:
       build-command: make build
       test-command: make test
 
   extension-helm-chart:
-    uses:  metal-stack/actions-common/.github/workflows/helm-chart.yaml@outputs
+    uses:  metal-stack/actions-common/.github/workflows/helm-chart.yaml@v1
     secrets: inherit
     with:
       chart-path: charts/${{ github.event.repository.name }}
