@@ -10,7 +10,6 @@ spec:
           ref: ghcr.io/metal-stack/charts/gardener-extension-audit:latest
       runtimeClusterValues:
         image:
-          pullPolicy: Always
           repository: ghcr.io/metal-stack/gardener-extension-audit
           tag: latest
   resources:
