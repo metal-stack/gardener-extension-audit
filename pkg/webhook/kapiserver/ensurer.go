@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -62,6 +63,13 @@ func (e *ensurer) EnsureKubeAPIServerDeployment(ctx context.Context, gctx gconte
 	}
 	err = e.client.Get(ctx, client.ObjectKeyFromObject(ex), ex)
 	if err != nil {
+		// Ignore cases where the extension was enabled while the shoot is hibernating or already hibernated.
+		// For a hibernated shoot, Gardener processes extensions after the kube-apiserver. Thus, we have to skip
+		// the check here to not block the reconcile.
+		if client.IgnoreNotFound(err) == nil && extensionscontroller.IsHibernationEnabled(cluster) {
+			e.logger.Info("skip mutating api server because shoot is hibernated and extension resource does not exist yet")
+			return nil
+		}
 		return fmt.Errorf("unable to find extension resource. this extension needs to be configured with lifecycle policy BeforeKubeAPIServer")
 	}
 
